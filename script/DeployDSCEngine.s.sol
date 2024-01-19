@@ -16,15 +16,16 @@ contract DeployDSCEngine is Script {
         (address weth, address wbtc, address wethUsdPriceFeed, address wbtcUsdPriceFeed, address deployerKey) =
             helperConfig.activeNetworkConfig();
 
-        tokenAddresses.push(weth);
-        tokenAddresses.push(wbtc);
-
-        priceFeedAddresses.push(wethUsdPriceFeed);
-        priceFeedAddresses.push(wbtcUsdPriceFeed);
+        tokenAddresses = [weth, wbtc];
+        priceFeedAddresses = [wethUsdPriceFeed, wbtcUsdPriceFeed];
 
         vm.startBroadcast(deployerKey);
         DecentralizedStableCoin dsCoin = new DecentralizedStableCoin();
         DSCEngine dscEngine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsCoin));
+
+        // dscCoin has a ownable function and we want DSCEngine to be the owner of DSCoin
+        dsCoin.transferOwnership(address(dscEngine));
+
         vm.stopBroadcast();
 
         return (dscEngine, dsCoin, helperConfig);
