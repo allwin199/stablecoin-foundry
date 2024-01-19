@@ -142,7 +142,7 @@ contract DSCEngine is ReentrancyGuard {
     /// @param tokenCollateralAddress  tokenAddress should be either wETH or wBTC, handled by isAllowedToken modifier
     /// @param amountCollateral collateral amount to be deposited
     function depositCollateral(address tokenCollateralAddress, uint256 amountCollateral)
-        external
+        public
         moreThanZero(amountCollateral)
         isAllowedToken(tokenCollateralAddress)
         nonReentrant
@@ -168,7 +168,7 @@ contract DSCEngine is ReentrancyGuard {
     /// @notice check if the collateral value > DSC amount
     /// @param amountDSCToMint The amount of Decentralized StableCoin to mint
     /// @notice user must have more collateral value than the minimum threshold
-    function mintDSC(uint256 amountDSCToMint) external moreThanZero(amountDSCToMint) nonReentrant {
+    function mintDSC(uint256 amountDSCToMint) public moreThanZero(amountDSCToMint) nonReentrant {
         s_DSCMinted[msg.sender] = s_DSCMinted[msg.sender] + amountDSCToMint;
         // once we update the mapping
         // we need to make sure that by minting this DSC, user's health factor is not broken
@@ -179,6 +179,15 @@ contract DSCEngine is ReentrancyGuard {
         if (!success) {
             revert DSCEngine__MintingDSCFailed();
         }
+    }
+
+    function despositCollateralAndMintDSC(
+        address tokenCollateralAddress,
+        uint256 amountCollateral,
+        uint256 amountDSCToMint
+    ) public {
+        depositCollateral(tokenCollateralAddress, amountCollateral);
+        mintDSC(amountDSCToMint);
     }
 
     //////////////////////////////////////////////////////////
@@ -252,9 +261,16 @@ contract DSCEngine is ReentrancyGuard {
         uint256 amountInUsd = (valueInUsd * amount) / PRECISION;
         return amountInUsd;
 
-        // if valueInUsd = 100e18
-        // amount = 200e18
+        // if valueInUsd = 2000e18
+        // amount = 10e18
         // (valueInUsd * amount) / PRECISION;
-        // (100e18 * 200e18)/1e18 = (2000000e36)/1e18 = 20000e18;
+        // (2000e18 * 10e18)/1e18 = (20000e36)/1e18 = 20000e18;
+    }
+
+    //////////////////////////////////////////////////////////
+    //////////////////  Getter Functions  ////////////////////
+    //////////////////////////////////////////////////////////
+    function getCollateralBalanceOfUser(address user, address token) external view returns (uint256) {
+        return s_collateralDepositedByUser[user][token];
     }
 }
