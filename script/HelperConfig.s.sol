@@ -22,13 +22,13 @@ contract HelperConfig is Script {
 
     constructor() {
         if (block.chainid == 11155111) {
-            activeNetworkConfig = getSepoliaConfig();
+            activeNetworkConfig = getSepoliaEthConfig();
         } else {
-            activeNetworkConfig = getOrCreateAnvilConfig();
+            activeNetworkConfig = getOrCreateAnvilEthConfig();
         }
     }
 
-    function getSepoliaConfig() public view returns (NetworkConfig memory) {
+    function getSepoliaEthConfig() public view returns (NetworkConfig memory) {
         NetworkConfig memory sepoliaConfig = NetworkConfig({
             weth: 0xdd13E55209Fd76AfE204dBda4007C227904f0a81,
             wbtc: 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063,
@@ -40,7 +40,7 @@ contract HelperConfig is Script {
         return sepoliaConfig;
     }
 
-    function getOrCreateAnvilConfig() public returns (NetworkConfig memory) {
+    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
         if (activeNetworkConfig.weth != address(0)) {
             return activeNetworkConfig;
         }
