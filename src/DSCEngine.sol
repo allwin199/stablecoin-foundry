@@ -174,6 +174,11 @@ contract DSCEngine is ReentrancyGuard {
         // we need to make sure that by minting this DSC, user's health factor is not broken
         // If health factor is broken we should revert
         _revertIfHealthFactorIsBroken(msg.sender);
+
+        bool success = i_dsc.mint(msg.sender, amountDSCToMint);
+        if (!success) {
+            revert DSCEngine__MintingDSCFailed();
+        }
     }
 
     //////////////////////////////////////////////////////////
