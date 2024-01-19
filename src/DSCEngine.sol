@@ -61,11 +61,14 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__DepositCollateralFailed();
     error DSCEngine__MintingDSCFailed();
     error DSCEngine__BreaksHealthFactor(uint256 healthFactor);
+    error DSCEngine__RedeemCollateral_TransferFailed();
+    error DSCEngine__TransferFailed();
 
     //////////////////////////////////////////////////////////
     ///////////////////////  Events  /////////////////////////
     //////////////////////////////////////////////////////////
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
+    event CollateralRedeemed(address indexed user, address indexed token, uint256 indexed amount);
 
     //////////////////////////////////////////////////////////
     /////////////////  State Variables  //////////////////////
@@ -194,6 +197,53 @@ contract DSCEngine is ReentrancyGuard {
         mintDSC(amountDSCToMint);
     }
 
+    // In order to redeem collateral:
+    // 1. health factor must be over 1 AFTER collateral pulled
+    /// @notice CEI
+    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral)
+        public
+        moreThanZero(amountCollateral)
+        nonReentrant
+    {
+        s_collateralDepositedByUser[msg.sender][tokenCollateralAddress] =
+            s_collateralDepositedByUser[msg.sender][tokenCollateralAddress] - amountCollateral;
+        emit CollateralRedeemed(msg.sender, tokenCollateralAddress, amountCollateral);
+
+        // send the collateral back to the user
+        bool success = IERC20(tokenCollateralAddress).transfer(msg.sender, amountCollateral);
+        if (!success) {
+            revert DSCEngine__RedeemCollateral_TransferFailed();
+        }
+
+        // now the collateral amount is deducted
+        // let's check whether user health factor is > 1
+        // If not revert
+        _revertIfHealthFactorIsBroken(msg.sender);
+    }
+
+    function burnDSC(uint256 amountDSCToBurn) public moreThanZero(amountDSCToBurn) nonReentrant {
+        s_DSCMinted[msg.sender] = s_DSCMinted[msg.sender] - amountDSCToBurn;
+
+        // get the DSC from the user
+        bool success = i_dsc.transferFrom(msg.sender, address(this), amountDSCToBurn);
+        if (!success) {
+            revert DSCEngine__TransferFailed();
+        }
+
+        i_dsc.burn(amountDSCToBurn);
+
+        _revertIfHealthFactorIsBroken(msg.sender); // I don't think this would ever hit...
+    }
+
+    function redeemCollateralAndBurnDSC(
+        address tokenCollateralAddress,
+        uint256 amountCollateral,
+        uint256 amountDSCToBurn
+    ) public {
+        burnDSC(amountDSCToBurn);
+        redeemCollateral(tokenCollateralAddress, amountCollateral);
+    }
+
     //////////////////////////////////////////////////////////
     //////////  Private & Internal View Functions  ///////////
     //////////////////////////////////////////////////////////
@@ -217,11 +267,18 @@ contract DSCEngine is ReentrancyGuard {
             (totalCollateralValueInUSD * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
         // LIQUIDATION_PRECISION is 100
         // the reason we are dividing by 100 is
-        // since we are multiplying by LIQUIDATION_THRESHOLD it is make the number bigger
+        // since we are multiplying by LIQUIDATION_THRESHOLD it makes the number bigger
 
-        // watch this fn again
+        // totalDSCMinted = 100e18
+        // totalCollateralValueInUSD = 20000e18 // actual value is 100 ether but usd value is 20000e18
+        // totalCollateralValueInUSD * LIQUIDATION_THRESHOLD / LIQUIDATION_PRECISION
+        // 20000e18 * 50 = 1000000e18 / 100 = 10000e18
 
         return ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted);
+
+        // (collateralAdjustedForThreshold * PRECISION) / totalDSCMinted)
+        // 10000e18 * 1e18 = 10000e36
+        // 10000e36 / 100e18 = 100e18
     }
 
     // 1. Check health factor (do they have enough collateral?)
