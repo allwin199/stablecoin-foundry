@@ -84,6 +84,7 @@ contract DSCEngine is ReentrancyGuard {
     mapping(address token => address priceFeed) private s_priceFeeds;
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDepositedByUser;
     mapping(address user => uint256 amountDSCMinted) private s_DSCMinted;
+    address[] private s_collateralTokens;
 
     //////////////////////////////////////////////////////////
     ////////////////////  Modifiers  /////////////////////////
@@ -126,6 +127,7 @@ contract DSCEngine is ReentrancyGuard {
         }
         for (uint256 index = 0; index < tokenAddresses.length; index++) {
             s_priceFeeds[tokenAddresses[index]] = priceFeedAddresses[index];
+            s_collateralTokens.push(tokenAddresses[index]);
         }
         i_dsc = DecentralizedStableCoin(dscAddress);
     }
@@ -162,8 +164,11 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
-    /// @param amountDSCToMint amount of DSC to mint
-    function mintDSC(uint256 amountDSCToMint) external moreThanZero(amountDSCToMint) {
+    /// @notice follows CEI
+    /// @notice check if the collateral value > DSC amount
+    /// @param amountDSCToMint The amount of Decentralized StableCoin to mint
+    /// @notice user must have more collateral value than the minimum threshold
+    function mintDSC(uint256 amountDSCToMint) external moreThanZero(amountDSCToMint) nonReentrant {
         s_DSCMinted[msg.sender] = s_DSCMinted[msg.sender] + amountDSCToMint;
         // once we update the mapping
         // we need to make sure that by minting this DSC, user's health factor is not broken
@@ -174,5 +179,59 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////////////////////////////
     //////////  Private & Internal View Functions  ///////////
     //////////////////////////////////////////////////////////
-    function _revertIfHealthFactorIsBroken(address user) internal {}
+
+    function _getAccountInformation(address user) private view returns (uint256, uint256) {
+        uint256 totalDSCMinted = s_DSCMinted[msg.sender];
+        uint256 totalCollateralValueInUsd = getAccountCollateralValue(user);
+        return (totalDSCMinted, totalCollateralValueInUsd);
+    }
+
+    /// @notice Returns how close to liquidation a user is
+    /// @notice If a user goes below `MINIMUM_THRESHOLD`, they can get liquidated
+    function _healthFactor(address user) public view {
+        // 1. To calculate the health factor of the user
+        // - get the VALUE of the totalCollateral deposited by the user
+        // - get the totalDSC minted by the user
+        (uint256 totalDSCMinted, uint256 totalCollateralValueInUSD) = _getAccountInformation(user);
+    }
+
+    function _revertIfHealthFactorIsBroken(address user) private view {
+        // 1. Check health factor (do they have enough collateral?)
+        // 2. Revert If they don't
+
+        // To check the health factor, get the health factor of the user
+        _healthFactor(user);
+    }
+
+    //////////////////////////////////////////////////////////
+    //////////  Public & External View Functions  ////////////
+    //////////////////////////////////////////////////////////
+
+    function getAccountCollateralValue(address user) public view returns (uint256 totalCollateralValueInUSD) {
+        // since we have more than one collateral tokens
+        // we have to loop through each token and get the amount they have deposited
+        // and map it to the price, to get the USD value
+        address[] memory collateralTokens = s_collateralTokens;
+        for (uint256 i = 0; i < collateralTokens.length; i++) {
+            address token = collateralTokens[i];
+            uint256 amount = s_collateralDepositedByUser[user][token];
+            totalCollateralValueInUSD = totalCollateralValueInUSD + getUsdValue(token, amount);
+        }
+        return totalCollateralValueInUSD;
+    }
+
+    function getUsdValue(address token, uint256 amount) public view returns (uint256) {
+        // refer priceFeed in fundeMe
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
+        (, int256 price,,,) = priceFeed.latestRoundData();
+        // price will be 8 decimals
+        // but ether is 18 decimals
+        // so we have to do uint256(price) * 1e10
+        // this will give price of 1ETH in terms of USD
+        // If we multiple with the amount
+        // we will get actual value of collateral in USD
+        uint256 valueInUsd = uint256(price) * ADDITIONAL_FEED_PRECISION;
+        uint256 amountInUsd = (valueInUsd * amount) / PRECISION;
+        return amountInUsd;
+    }
 }

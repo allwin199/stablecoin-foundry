@@ -16,3 +16,7 @@
 -   User should approve DSCEngine to make transfer on behalf of the user
 -   Once the collateral is deposited it will be updated in mapping
 -   event will be emitted
+
+## Minting DSC
+
+-   Before minting DSC, user should have more collateral value than minimum threshold
