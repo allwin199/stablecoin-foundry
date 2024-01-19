@@ -181,6 +181,10 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
+    /// @param tokenCollateralAddress The address of the token to deposit as collateral, token can be either wETH or wBTC
+    /// @param amountCollateral The amount of collateral to desposit
+    /// @param amountDSCToMint The amount of decentralized stablecoin to mint
+    /// @notice This function will deposit your collateral and mint dsc in one transaction
     function despositCollateralAndMintDSC(
         address tokenCollateralAddress,
         uint256 amountCollateral,
@@ -272,5 +276,9 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////////////////////////////
     function getCollateralBalanceOfUser(address user, address token) external view returns (uint256) {
         return s_collateralDepositedByUser[user][token];
+    }
+
+    function getDSCBalanceOfUser(address user) external view returns (uint256) {
+        return s_DSCMinted[user];
     }
 }

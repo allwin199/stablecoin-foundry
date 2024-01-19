@@ -35,6 +35,7 @@ contract DSCEngineTest is Test {
     address private user = makeAddr("user");
     uint256 private constant USER_STARTING_ERC20_BALANCE = 100e18;
     uint256 private constant COLLATERAL_AMOUNT = 10e18;
+    uint256 private constant MINT_DSC_AMOUNT = 1e18;
 
     function setUp() external {
         deployer = new DeployDSCEngine();
@@ -76,14 +77,63 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
-    function test_DespositCollateral_UpdatesCollateralBalance() public {
+    modifier collateralDeposited() {
         vm.startPrank(user);
         ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_AMOUNT);
         dscEngine.depositCollateral(weth, COLLATERAL_AMOUNT);
         vm.stopPrank();
+        _;
+    }
+
+    function test_DespositCollateral_UpdatesCollateralBalance() public collateralDeposited {
+        uint256 userCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
+        assertEq(userCollateralBalance, COLLATERAL_AMOUNT, "depositCollateral");
+    }
+
+    //////////////////////////////////////////////////////////
+    ///////////////////  Mint DSC Tests  /////////////////////
+    //////////////////////////////////////////////////////////
+
+    function test_UserCan_MintDSC() public collateralDeposited {
+        vm.startPrank(user);
+        dscEngine.mintDSC(MINT_DSC_AMOUNT);
+        vm.stopPrank();
+    }
+
+    modifier collateralDeposited_DSCMinted() {
+        vm.startPrank(user);
+
+        // depositing collateral
+        ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_AMOUNT);
+        dscEngine.depositCollateral(weth, COLLATERAL_AMOUNT);
+
+        // minting DSC
+        dscEngine.mintDSC(MINT_DSC_AMOUNT);
+        vm.stopPrank();
+
+        _;
+    }
+
+    function test_UserCan_MintDSC_UpdatesBalance() public collateralDeposited_DSCMinted {
+        uint256 dscBalanceOfUser = dscEngine.getDSCBalanceOfUser(user);
+        assertEq(dscBalanceOfUser, MINT_DSC_AMOUNT, "depositCollateralAndMintDSC");
+    }
+
+    //////////////////////////////////////////////////////////
+    /////////  Deposit Collateral And Mint DSC Tests  ////////
+    //////////////////////////////////////////////////////////
+    function test_UserCan_DepositCollateral_AndMintDSC() public {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_AMOUNT);
+
+        dscEngine.despositCollateralAndMintDSC(weth, COLLATERAL_AMOUNT, MINT_DSC_AMOUNT);
+        vm.stopPrank();
 
         uint256 userCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
-        assertEq(userCollateralBalance, COLLATERAL_AMOUNT);
+        assertEq(userCollateralBalance, COLLATERAL_AMOUNT, "depositCollateralAndMintDSC");
+
+        uint256 dscBalanceOfUser = dscEngine.getDSCBalanceOfUser(user);
+        assertEq(dscBalanceOfUser, MINT_DSC_AMOUNT, "depositCollateralAndMintDSC");
     }
 
     //////////////////////////////////////////////////////////
