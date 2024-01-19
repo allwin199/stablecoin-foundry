@@ -83,6 +83,7 @@ contract DSCEngine is ReentrancyGuard {
     // Storage
     mapping(address token => address priceFeed) private s_priceFeeds;
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDepositedByUser;
+    mapping(address user => uint256 amountDSCMinted) private s_DSCMinted;
 
     //////////////////////////////////////////////////////////
     ////////////////////  Modifiers  /////////////////////////
@@ -151,6 +152,7 @@ contract DSCEngine is ReentrancyGuard {
 
         emit CollateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
 
+        // To get the tokens
         /// @dev msg.sender should approve DSCEngine contract to transfer tokens on behalf of the sender
         /// @dev DSCEngine will transfer tokens and place it in this contract
         /// @dev user balance will be updated accordingly
@@ -159,4 +161,18 @@ contract DSCEngine is ReentrancyGuard {
             revert DSCEngine__DepositCollateralFailed();
         }
     }
+
+    /// @param amountDSCToMint amount of DSC to mint
+    function mintDSC(uint256 amountDSCToMint) external moreThanZero(amountDSCToMint) {
+        s_DSCMinted[msg.sender] = s_DSCMinted[msg.sender] + amountDSCToMint;
+        // once we update the mapping
+        // we need to make sure that by minting this DSC, user's health factor is not broken
+        // If health factor is broken we should revert
+        _revertIfHealthFactorIsBroken(msg.sender);
+    }
+
+    //////////////////////////////////////////////////////////
+    //////////  Private & Internal View Functions  ///////////
+    //////////////////////////////////////////////////////////
+    function _revertIfHealthFactorIsBroken(address user) internal {}
 }
