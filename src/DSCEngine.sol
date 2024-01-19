@@ -73,8 +73,8 @@ contract DSCEngine is ReentrancyGuard {
     // constant
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant PRECISION = 1e18;
-    uint256 private constant LIQUIDATION_THRESHOLD = 50;
-    uint256 private constant LIQUIDATION_PRECISION = 50;
+    uint256 private constant LIQUIDATION_THRESHOLD = 50; // This means you need to be 200% over-collateralized
+    uint256 private constant LIQUIDATION_PRECISION = 100;
     uint256 private constant MIN_HEALTH_FACTOR = 1;
 
     // Immutable Variables
@@ -188,19 +188,32 @@ contract DSCEngine is ReentrancyGuard {
 
     /// @notice Returns how close to liquidation a user is
     /// @notice If a user goes below `MINIMUM_THRESHOLD`, they can get liquidated
-    function _healthFactor(address user) public view {
+    function _healthFactor(address user) public view returns (uint256) {
         // 1. To calculate the health factor of the user
         // - get the VALUE of the totalCollateral deposited by the user
         // - get the totalDSC minted by the user
         (uint256 totalDSCMinted, uint256 totalCollateralValueInUSD) = _getAccountInformation(user);
+
+        // we need to make sure that user is always 200% overcollateralized
+        uint256 collateralAdjustedForThreshold =
+            (totalCollateralValueInUSD * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
+        // LIQUIDATION_PRECISION is 100
+        // the reason we are dividing by 100 is
+        // since we are multiplying by LIQUIDATION_THRESHOLD it is make the number bigger
+
+        // watch this fn again
+
+        return ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted);
     }
 
+    // 1. Check health factor (do they have enough collateral?)
+    // 2. Revert If they don't
     function _revertIfHealthFactorIsBroken(address user) private view {
-        // 1. Check health factor (do they have enough collateral?)
-        // 2. Revert If they don't
-
         // To check the health factor, get the health factor of the user
-        _healthFactor(user);
+        uint256 userHealthFactor = _healthFactor(user);
+        if (userHealthFactor < MIN_HEALTH_FACTOR) {
+            revert DSCEngine__BreaksHealthFactor(userHealthFactor);
+        }
     }
 
     //////////////////////////////////////////////////////////
@@ -233,5 +246,10 @@ contract DSCEngine is ReentrancyGuard {
         uint256 valueInUsd = uint256(price) * ADDITIONAL_FEED_PRECISION;
         uint256 amountInUsd = (valueInUsd * amount) / PRECISION;
         return amountInUsd;
+
+        // if valueInUsd = 100e18
+        // amount = 200e18
+        // (valueInUsd * amount) / PRECISION;
+        // (100e18 * 200e18)/1e18 = (2000000e36)/1e18 = 20000e18;
     }
 }
