@@ -14,3 +14,5 @@ docs/
 .env
 
 broadcast/
+
+coverage.txt

@@ -345,7 +345,7 @@ contract DSCEngine is ReentrancyGuard {
 
     /// @notice Returns how close to liquidation a user is
     /// @notice If a user goes below `MINIMUM_THRESHOLD`, they can get liquidated
-    function _healthFactor(address user) public view returns (uint256) {
+    function _healthFactor(address user) internal view returns (uint256) {
         // 1. To calculate the health factor of the user
         // - get the VALUE of the totalCollateral deposited by the user
         // - get the totalDSC minted by the user

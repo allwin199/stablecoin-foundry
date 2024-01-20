@@ -45,7 +45,8 @@ contract DSCEngineTest is Test {
     address private deployerKey;
 
     address private user = makeAddr("user");
-    uint256 private constant USER_STARTING_ERC20_BALANCE = 100e18;
+    address private liquidator = makeAddr("liquidator");
+    uint256 private constant STARTING_ERC20_BALANCE = 100e18;
     uint256 private constant COLLATERAL_AMOUNT = 10e18;
     uint256 private constant MINT_DSC_AMOUNT = 1e18;
     uint256 private constant BURN_DSC_AMOUNT = 1e18;
@@ -58,7 +59,9 @@ contract DSCEngineTest is Test {
 
         // we are minting some ERC20 tokens for the user
         vm.startPrank(msg.sender);
-        ERC20Mock(weth).mint(user, USER_STARTING_ERC20_BALANCE);
+        ERC20Mock(weth).mint(user, STARTING_ERC20_BALANCE);
+        // giving liquidator funds
+        ERC20Mock(weth).mint(liquidator, STARTING_ERC20_BALANCE);
         vm.stopPrank();
     }
 
@@ -172,6 +175,19 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
+    function test_CollateralAmount_InUsd() public collateralDeposited {
+        vm.startPrank(user);
+        uint256 collateralValueInUsd = dscEngine.getAccountCollateralValue(user);
+        vm.stopPrank();
+
+        // collateral_amount = 10e18
+        // value of 1 ETH in usd = 2000e18
+        // 10e18 * 2000e18 / 1e18 = 20000e18
+
+        uint256 actualValue = 20000e18;
+        assertEq(collateralValueInUsd, actualValue, "accountCollateralValue");
+    }
+
     //////////////////////////////////////////////////////////
     ///////////////////  Mint DSC Tests  /////////////////////
     //////////////////////////////////////////////////////////
@@ -216,6 +232,14 @@ contract DSCEngineTest is Test {
 
         uint256 dscBalanceOfUser = dscEngine.getDSCBalanceOfUser(user);
         assertEq(dscBalanceOfUser, MINT_DSC_AMOUNT, "depositCollateralAndMintDSC");
+    }
+
+    function test_CheckHealthFactor() public collateralDeposited_DSCMinted {
+        vm.startPrank(user);
+        uint256 userHealthFactor = dscEngine.getUserHealthFactor(user);
+        vm.stopPrank();
+
+        assertGt(userHealthFactor, 1e18); // checking whether userHealthFactor > 1 after depositing and minting
     }
 
     //////////////////////////////////////////////////////////
@@ -297,6 +321,31 @@ contract DSCEngineTest is Test {
         vm.startPrank(user);
         dsCoin.approve(address(dscEngine), BURN_DSC_AMOUNT);
         dscEngine.redeemCollateralAndBurnDSC(weth, COLLATERAL_AMOUNT, BURN_DSC_AMOUNT);
+        vm.stopPrank();
+    }
+
+    //////////////////////////////////////////////////////////
+    ////////////////////  Liquidate Tests  ///////////////////
+    //////////////////////////////////////////////////////////
+    function test_RevertsIf_Liquidation_ZeroAmount() public {
+        vm.startPrank(liquidator);
+        vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
+        dscEngine.liquidate(weth, user, 0);
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_Liquidation_NotAllowedToken() public {
+        vm.startPrank(liquidator);
+        ERC20Mock sampleERC20 = new ERC20Mock();
+        vm.expectRevert(DSCEngine.DSCEngine__TokenNotAllowed.selector);
+        dscEngine.liquidate(address(sampleERC20), user, MINT_DSC_AMOUNT);
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_UserHealthFactorIsOk() public {
+        vm.startPrank(liquidator);
+        vm.expectRevert(DSCEngine.DSCEngine__HealthFactorOk.selector);
+        dscEngine.liquidate(weth, user, MINT_DSC_AMOUNT);
         vm.stopPrank();
     }
 }
