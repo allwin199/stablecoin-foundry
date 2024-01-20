@@ -25,6 +25,14 @@ contract DSCEngineTest is Test {
     error DSCEngine__HealthFactorOk();
     error DSCEngine__HealthFactorNotImproved();
 
+    //////////////////////////////////////////////////////////
+    ///////////////////////  Events  /////////////////////////
+    //////////////////////////////////////////////////////////
+    event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
+    event CollateralRedeemed(
+        address indexed redeemedFrom, address indexed redeemedTo, address indexed token, uint256 amount
+    );
+
     DeployDSCEngine private deployer;
     HelperConfig private helperConfig;
     DSCEngine private dscEngine;
@@ -86,6 +94,28 @@ contract DSCEngineTest is Test {
     }
 
     //////////////////////////////////////////////////////////
+    /////////////////  Price Feed Tests  /////////////////////
+    //////////////////////////////////////////////////////////
+
+    function test_UsdValue() public {
+        uint256 collateralAmount = 10e18;
+        uint256 valueInUsd = dscEngine.getUsdValue(weth, collateralAmount);
+        // according to our mocks ethUsdPrice = 2000e8
+        // ((2000e8 * 1e10) * 10e18) / 1e18 = 20000e18;
+        uint256 expectedUsd = 20000e18;
+        assertEq(valueInUsd, expectedUsd, "getUsdValue");
+    }
+
+    function test_TokenAmountFromUsd() public {
+        uint256 usdValue = 2000e18;
+
+        uint256 actualValue = dscEngine.getTokenAmountFromUsd(weth, usdValue);
+
+        uint256 expectedValueInEth = 1e18;
+        assertEq(actualValue, expectedValueInEth, "tokenAmountFromUsd");
+    }
+
+    //////////////////////////////////////////////////////////
     //////////////  Deposit Collateral Tests  ////////////////
     //////////////////////////////////////////////////////////
 
@@ -97,10 +127,20 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
+    function test_RevertsIf_CollateralToken_NotAllowed() public {
+        vm.startPrank(user);
+        // let's create a new ERC20 token
+        // this token will definitely different from the one already created in deployDSCEngine
+        ERC20Mock sampleERC20 = new ERC20Mock();
+        vm.expectRevert(DSCEngine.DSCEngine__TokenNotAllowed.selector);
+        dscEngine.depositCollateral(address(sampleERC20), COLLATERAL_AMOUNT);
+        vm.stopPrank();
+    }
+
     function test_DespositCollateral() public {
         vm.startPrank(user);
         // since dscEngine is calling transferFrom on behalf of user
-        // user should dscEngine
+        // user should approve dscEngine
         ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_AMOUNT);
         dscEngine.depositCollateral(weth, COLLATERAL_AMOUNT);
         vm.stopPrank();
@@ -117,6 +157,18 @@ contract DSCEngineTest is Test {
     function test_DespositCollateral_UpdatesCollateralBalance() public collateralDeposited {
         uint256 userCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
         assertEq(userCollateralBalance, COLLATERAL_AMOUNT, "depositCollateral");
+    }
+
+    function test_DepositCollateral_EmitsEvent() public {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_AMOUNT);
+
+        // DSCEngine is the one emitting this event
+        vm.expectEmit(true, true, true, false, address(dscEngine));
+        emit CollateralDeposited(user, weth, COLLATERAL_AMOUNT);
+        dscEngine.depositCollateral(weth, COLLATERAL_AMOUNT);
+
+        vm.stopPrank();
     }
 
     //////////////////////////////////////////////////////////
@@ -163,18 +215,5 @@ contract DSCEngineTest is Test {
 
         uint256 dscBalanceOfUser = dscEngine.getDSCBalanceOfUser(user);
         assertEq(dscBalanceOfUser, MINT_DSC_AMOUNT, "depositCollateralAndMintDSC");
-    }
-
-    //////////////////////////////////////////////////////////
-    /////////////////  Price Feed Tests  /////////////////////
-    //////////////////////////////////////////////////////////
-
-    function test_UsdValue() public {
-        uint256 collateralAmount = 10e18;
-        uint256 valueInUsd = dscEngine.getUsdValue(weth, collateralAmount);
-        // according to our mocks ethUsdPrice = 2000e8
-        // ((2000e8 * 1e10) * 10e18) / 1e18 = 20000e18;
-        uint256 expectedUsd = 20000e18;
-        assertEq(valueInUsd, expectedUsd, "getUsdValue");
     }
 }
