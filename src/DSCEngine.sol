@@ -65,6 +65,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__TransferFailed();
     error DSCEngine__HealthFactorOk();
     error DSCEngine__HealthFactorNotImproved();
+    error DSCEngine__BurnDSC_TransferFailed();
 
     //////////////////////////////////////////////////////////
     ///////////////////////  Events  /////////////////////////
@@ -309,7 +310,7 @@ contract DSCEngine is ReentrancyGuard {
         // give the total collateral back to the liquidator
         bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
         if (!success) {
-            revert DSCEngine__TransferFailed();
+            revert DSCEngine__RedeemCollateral_TransferFailed();
         }
     }
 
@@ -327,7 +328,7 @@ contract DSCEngine is ReentrancyGuard {
         bool success = i_dsc.transferFrom(dscFrom, address(this), amountDscToBurn);
         // This conditional is hypothetically unreachable
         if (!success) {
-            revert DSCEngine__TransferFailed();
+            revert DSCEngine__BurnDSC_TransferFailed();
         }
         // burn the DSC collected from liquidator
         i_dsc.burn(amountDscToBurn);

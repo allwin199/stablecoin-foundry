@@ -8,6 +8,9 @@ import {DSCEngine} from "../../src/DSCEngine.sol";
 import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
+import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
+import {MockFailedMintDSC} from "../mocks/MockFailedMintDSC.sol";
 
 contract DSCEngineTest is Test {
     //////////////////////////////////////////////////////////
@@ -24,6 +27,7 @@ contract DSCEngineTest is Test {
     error DSCEngine__TransferFailed();
     error DSCEngine__HealthFactorOk();
     error DSCEngine__HealthFactorNotImproved();
+    error DSCEngine__BurnDSC_TransferFailed();
 
     //////////////////////////////////////////////////////////
     ///////////////////////  Events  /////////////////////////
@@ -188,6 +192,27 @@ contract DSCEngineTest is Test {
         assertEq(collateralValueInUsd, actualValue, "accountCollateralValue");
     }
 
+    // this function needs its own setup
+    function test_RevertsIf_DepositCollateral_TransferFailed() public {
+        vm.startBroadcast();
+        // instead of weth token
+        // we are deploying a new token which will revert when called transferFrom
+        MockFailedTransferFrom mockFailedTransferFrom = new MockFailedTransferFrom();
+
+        tokenAddresses.push(address(mockFailedTransferFrom));
+        priceFeedAddresses.push(wethUsdPriceFeed);
+
+        DSCEngine mockDscEngine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsCoin));
+
+        mockFailedTransferFrom.mint(user, STARTING_ERC20_BALANCE);
+        vm.stopBroadcast();
+
+        vm.startPrank(user);
+        vm.expectRevert(DSCEngine.DSCEngine__DepositCollateralFailed.selector);
+        mockDscEngine.depositCollateral(address(mockFailedTransferFrom), COLLATERAL_AMOUNT);
+        vm.stopPrank();
+    }
+
     //////////////////////////////////////////////////////////
     ///////////////////  Mint DSC Tests  /////////////////////
     //////////////////////////////////////////////////////////
@@ -215,6 +240,31 @@ contract DSCEngineTest is Test {
     function test_UserCan_MintDSC_UpdatesBalance() public collateralDeposited_DSCMinted {
         uint256 dscBalanceOfUser = dscEngine.getDSCBalanceOfUser(user);
         assertEq(dscBalanceOfUser, MINT_DSC_AMOUNT, "depositCollateralAndMintDSC");
+    }
+
+    // this fn needs its own setup
+    function test_RevertsIf_MintingFailed() public {
+        vm.startBroadcast();
+        // instead of weth token
+        // we are deploying a new token which will revert when called mint
+        MockFailedMintDSC mockFailedMintDSC = new MockFailedMintDSC();
+
+        tokenAddresses.push(weth);
+        priceFeedAddresses.push(wethUsdPriceFeed);
+
+        DSCEngine mockDscEngine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(mockFailedMintDSC));
+
+        vm.stopBroadcast();
+
+        vm.startPrank(user);
+
+        ERC20Mock(weth).approve(address(mockDscEngine), COLLATERAL_AMOUNT);
+        mockDscEngine.depositCollateral(weth, COLLATERAL_AMOUNT);
+
+        vm.expectRevert(DSCEngine.DSCEngine__MintingDSCFailed.selector);
+        mockDscEngine.mintDSC(MINT_DSC_AMOUNT);
+
+        vm.stopPrank();
     }
 
     //////////////////////////////////////////////////////////
@@ -275,6 +325,32 @@ contract DSCEngineTest is Test {
         vm.startPrank(user);
         vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreaksHealthFactor.selector, 0));
         dscEngine.redeemCollateral(weth, COLLATERAL_AMOUNT);
+        vm.stopPrank();
+    }
+
+    // this function needs its own setup
+    function test_RevertsIf_RedeemCollateralTransferFailed() public {
+        vm.startBroadcast();
+        // instead of weth token
+        // we are deploying a new token which will revert when called transferFrom
+        MockFailedTransfer mockFailedTransfer = new MockFailedTransfer();
+
+        tokenAddresses.push(address(mockFailedTransfer));
+        priceFeedAddresses.push(wethUsdPriceFeed);
+
+        DSCEngine mockDscEngine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsCoin));
+
+        mockFailedTransfer.mint(user, STARTING_ERC20_BALANCE);
+        vm.stopBroadcast();
+
+        vm.startPrank(user);
+
+        mockFailedTransfer.approve(address(mockDscEngine), COLLATERAL_AMOUNT);
+        mockDscEngine.depositCollateral(address(mockFailedTransfer), COLLATERAL_AMOUNT);
+
+        vm.expectRevert(DSCEngine.DSCEngine__RedeemCollateral_TransferFailed.selector);
+        mockDscEngine.redeemCollateral(address(mockFailedTransfer), COLLATERAL_AMOUNT);
+
         vm.stopPrank();
     }
 
