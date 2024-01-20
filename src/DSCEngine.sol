@@ -252,9 +252,32 @@ contract DSCEngine is ReentrancyGuard {
         uint256 endingUserHealthFactor = _healthFactor(user);
         // DSC value we have in terms of USD
         // but we need in terms of ETH
+
         uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
+
+        // Bad User: $140 ETH is backing, $100 DSC
+        // debtToCover = $100 DSC
+        // we need to get the value of value of $100 DSC in terms of ETH
+        // 1 ETH => 2000e18 in USD
+        // $100/$2000 => 0.05e18
+        // liquidator has to pay 0.05 ETH to liquidate this user
+
+        // We have to give the liquidator 10% bonus
+        // If DSC covered by liquidator is $100
+        // 10% of 100 = 10
+        // they will get $110 worth in weth
+
         uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
+
+        // 110e18/2000e18 = 0.055 ETH
+        // user gets incentive of 10% of 0.05 which is 0.005 for liquidating
+        // 0.05 + 0.005 = 0.055
+        // by paying 0.05 ETH user gets back 0.055ETH
+
+        // (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION
+        // (0.05 ETH * 10)/100
+        // 0.055e18
 
         _redeemCollateral(collateral, totalCollateralToRedeem, user, msg.sender);
         _burnDsc(debtToCover, user, msg.sender);
@@ -273,8 +296,16 @@ contract DSCEngine is ReentrancyGuard {
     function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to)
         private
     {
+        // from will be the bad user, if called from liquidation
+        // to will be the liquidator
+
+        // If not called by liquidation both from & to will be msg.sender
+
+        // we have to detect the collateral from bad user
         s_collateralDepositedByUser[from][tokenCollateralAddress] -= amountCollateral;
         emit CollateralRedeemed(from, to, tokenCollateralAddress, amountCollateral);
+
+        // give the total collateral to the liquidator
         bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
         if (!success) {
             revert DSCEngine__TransferFailed();
@@ -282,13 +313,21 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     function _burnDsc(uint256 amountDscToBurn, address onBehalfOf, address dscFrom) private {
+        // onBehalfOf will be the bad user, if called from liquidation
+        // dscFrom will be the liquidator
+
+        // If not called by liquidation both onBehalfOf & dscFrom will be msg.sender
+
+        // deducting DSC balance from bad user
         s_DSCMinted[onBehalfOf] -= amountDscToBurn;
 
+        // transferring DSC from the liquidator to this contract
         bool success = i_dsc.transferFrom(dscFrom, address(this), amountDscToBurn);
         // This conditional is hypothetically unreachable
         if (!success) {
             revert DSCEngine__TransferFailed();
         }
+        // burn the DSC collected from liquidator
         i_dsc.burn(amountDscToBurn);
     }
 
