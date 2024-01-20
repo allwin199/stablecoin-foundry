@@ -237,6 +237,7 @@ contract DSCEngine is ReentrancyGuard {
     /// @notice The reason protocol should be overcollateralized is, we should incentivize the liquidator
     /// @notice A known bug would be if the protocol was only 100% collateralized, we wouldn't be able to liquidate anyone
     /// For example, if the price of the collateral plummeted before anyone could be liquidated
+    /// @notice follows CEI
     function liquidate(address collateral, address user, uint256 debtToCover)
         public
         moreThanZero(debtToCover)
@@ -249,6 +250,8 @@ contract DSCEngine is ReentrancyGuard {
         }
 
         uint256 endingUserHealthFactor = _healthFactor(user);
+        // DSC value we have in terms of USD
+        // but we need in terms of ETH
         uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
         uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
@@ -328,10 +331,12 @@ contract DSCEngine is ReentrancyGuard {
         uint256 healthFactor = ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted);
 
         // (collateralAdjustedForThreshold * PRECISION) / totalDSCMinted)
+        // the reason we are multiplying with precision is we need all the values with 18 decimals
+        // if we don't it will be 1000e18/100e18 = 10
+        // this value will be definitely less than 1e18 which is the min_health_factor
         // 10000e18 * 1e18 = 10000e36
-        // the reason we are multiplying with precision is
-        // since MIN_HEALTH_FACTOR is 1e18. If we don't multiply precision healthFactor will always be below 1e18;
         // 10000e36 / 100e18 = 100e18
+        // 100e18 > 1e18
 
         return healthFactor;
     }
@@ -373,8 +378,8 @@ contract DSCEngine is ReentrancyGuard {
         // this will give price of 1ETH in terms of USD
         // If we multiple with the amount
         // we will get actual value of collateral in USD
-        uint256 valueInUsd = uint256(price) * ADDITIONAL_FEED_PRECISION;
-        uint256 amountInUsd = (valueInUsd * amount) / PRECISION;
+        uint256 valueOfEthInUsd = uint256(price) * ADDITIONAL_FEED_PRECISION;
+        uint256 amountInUsd = (valueOfEthInUsd * amount) / PRECISION;
         return amountInUsd;
 
         // if valueInUsd = 2000e18
@@ -390,7 +395,17 @@ contract DSCEngine is ReentrancyGuard {
         // 1 ETH = 2000 USD
         // The returned value from Chainlink will be 2000 * 1e8
         // Most USD pairs have 8 decimals, so we will just pretend they all do
-        return ((usdAmountInWei * PRECISION) / (uint256(price) * ADDITIONAL_FEED_PRECISION));
+        uint256 valueOfEthInUsd = uint256(price) * ADDITIONAL_FEED_PRECISION;
+
+        // let'say valueOfEthInUsd = 2000e18;
+        // usdAmountInWei = 1000e18;
+        // tokenAmountFromUsd = 1000e18 * 2000e18 = 0.5
+        // above method is wrong, we need all the values in wei which is 18 decimals
+        // tokenAmountFromUsd = (1000e18 * 1e18 )/ 2000e18 = 1000e36/2000e18 = 0.5e18
+
+        uint256 tokenAmountFromUsd = (usdAmountInWei * PRECISION) / valueOfEthInUsd;
+
+        return tokenAmountFromUsd;
     }
 
     //////////////////////////////////////////////////////////
