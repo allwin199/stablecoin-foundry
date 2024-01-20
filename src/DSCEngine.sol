@@ -253,7 +253,7 @@ contract DSCEngine is ReentrancyGuard {
         uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
 
-        _redeemCollateral(collateral, tokenAmountFromDebtCovered + bonusCollateral, user, msg.sender);
+        _redeemCollateral(collateral, totalCollateralToRedeem, user, msg.sender);
         _burnDsc(debtToCover, user, msg.sender);
 
         // This conditional should never hit, but just in case
@@ -310,20 +310,30 @@ contract DSCEngine is ReentrancyGuard {
         // we need to make sure that user is always 200% overcollateralized
         uint256 collateralAdjustedForThreshold =
             (totalCollateralValueInUSD * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
+        // LIQUIDATION_THRESHOLD is 50
+        // totalCollateralValueInUSD * LIQUIDATION_THRESHOLD
         // LIQUIDATION_PRECISION is 100
+        // (totalCollateralValueInUSD * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
         // the reason we are dividing by 100 is
         // since we are multiplying by LIQUIDATION_THRESHOLD it makes the number bigger
+        // to offset this we are diving by LIQUIDATION_PRECISION;
 
         // totalDSCMinted = 100e18
-        // totalCollateralValueInUSD = 20000e18 // actual value is 100 ether but usd value is 20000e18
+        // totalCollateralValueInUSD = 20000e18
+        // actual value is 10 ether but usd value is 20000e18
+        // value of 1Eth is 2000e18 => 10Eth is 20000e18
         // totalCollateralValueInUSD * LIQUIDATION_THRESHOLD / LIQUIDATION_PRECISION
         // 20000e18 * 50 = 1000000e18 / 100 = 10000e18
 
-        return ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted);
+        uint256 healthFactor = ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted);
 
         // (collateralAdjustedForThreshold * PRECISION) / totalDSCMinted)
         // 10000e18 * 1e18 = 10000e36
+        // the reason we are multiplying with precision is
+        // since MIN_HEALTH_FACTOR is 1e18. If we don't multiply precision healthFactor will always be below 1e18;
         // 10000e36 / 100e18 = 100e18
+
+        return healthFactor;
     }
 
     // 1. Check health factor (do they have enough collateral?)
