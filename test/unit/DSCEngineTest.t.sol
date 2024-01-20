@@ -15,11 +15,15 @@ contract DSCEngineTest is Test {
     //////////////////////////////////////////////////////////
     error DSCEngine__ZeroAmount();
     error DSCEngine__TokenNotAllowed();
-    error DSCEngine__TokenAddressesAnd_PriceFeedAddresses_MustBeSameLenght();
+    error DSCEngine__TokenAddressesAnd_PriceFeedAddresses_MustBeSameLength();
     error DSCEngine__ZeroAddress();
     error DSCEngine__DepositCollateralFailed();
     error DSCEngine__MintingDSCFailed();
     error DSCEngine__BreaksHealthFactor(uint256 healthFactor);
+    error DSCEngine__RedeemCollateral_TransferFailed();
+    error DSCEngine__TransferFailed();
+    error DSCEngine__HealthFactorOk();
+    error DSCEngine__HealthFactorNotImproved();
 
     DeployDSCEngine private deployer;
     HelperConfig private helperConfig;
@@ -54,6 +58,31 @@ contract DSCEngineTest is Test {
         uint256 totalSupply = IERC20(weth).totalSupply();
         console.log("Sender Balance", senderBalance);
         console.log("Total Supply of wEth", totalSupply);
+    }
+
+    //////////////////////////////////////////////////////////
+    //////////////////  Constructor Tests  ///////////////////
+    //////////////////////////////////////////////////////////
+    address[] tokenAddresses;
+    address[] priceFeedAddresses;
+
+    function test_RevertsIf_TokenAddressAnd_PriceFeedAddresses_OfDifferentLength() public {
+        tokenAddresses.push(weth);
+        tokenAddresses.push(wbtc);
+        priceFeedAddresses.push(wethUsdPriceFeed);
+
+        vm.expectRevert(DSCEngine.DSCEngine__TokenAddressesAnd_PriceFeedAddresses_MustBeSameLength.selector);
+        new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsCoin));
+    }
+
+    function test_RevertsIf_DSCoinAddressIs_ZeroAddress() public {
+        tokenAddresses.push(weth);
+        tokenAddresses.push(wbtc);
+        priceFeedAddresses.push(wethUsdPriceFeed);
+        priceFeedAddresses.push(wbtcUsdPriceFeed);
+
+        vm.expectRevert(DSCEngine.DSCEngine__ZeroAddress.selector);
+        new DSCEngine(tokenAddresses, priceFeedAddresses, address(0));
     }
 
     //////////////////////////////////////////////////////////

@@ -56,7 +56,7 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////////////////////////////
     error DSCEngine__ZeroAmount();
     error DSCEngine__TokenNotAllowed();
-    error DSCEngine__TokenAddressesAnd_PriceFeedAddresses_MustBeSameLenght();
+    error DSCEngine__TokenAddressesAnd_PriceFeedAddresses_MustBeSameLength();
     error DSCEngine__ZeroAddress();
     error DSCEngine__DepositCollateralFailed();
     error DSCEngine__MintingDSCFailed();
@@ -128,7 +128,7 @@ contract DSCEngine is ReentrancyGuard {
     /// @param dscAddress decentralizedStableCoin Address
     constructor(address[] memory tokenAddresses, address[] memory priceFeedAddresses, address dscAddress) {
         if (tokenAddresses.length != priceFeedAddresses.length) {
-            revert DSCEngine__TokenAddressesAnd_PriceFeedAddresses_MustBeSameLenght();
+            revert DSCEngine__TokenAddressesAnd_PriceFeedAddresses_MustBeSameLength();
         }
         if (dscAddress == address(0)) {
             revert DSCEngine__ZeroAddress();
