@@ -48,6 +48,7 @@ contract DSCEngineTest is Test {
     uint256 private constant USER_STARTING_ERC20_BALANCE = 100e18;
     uint256 private constant COLLATERAL_AMOUNT = 10e18;
     uint256 private constant MINT_DSC_AMOUNT = 1e18;
+    uint256 private constant BURN_DSC_AMOUNT = 1e18;
 
     function setUp() external {
         deployer = new DeployDSCEngine();
@@ -215,5 +216,87 @@ contract DSCEngineTest is Test {
 
         uint256 dscBalanceOfUser = dscEngine.getDSCBalanceOfUser(user);
         assertEq(dscBalanceOfUser, MINT_DSC_AMOUNT, "depositCollateralAndMintDSC");
+    }
+
+    //////////////////////////////////////////////////////////
+    ////////////////  Redeem Collateral Tests  ///////////////
+    //////////////////////////////////////////////////////////
+
+    function test_RevertsIf_RedeemCollateral_ZeroAmount() public {
+        vm.startPrank(user);
+        vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
+        dscEngine.redeemCollateral(weth, 0);
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_RedeemCollateral_WithoutBalance() public {
+        vm.startPrank(user);
+        vm.expectRevert();
+        dscEngine.redeemCollateral(weth, COLLATERAL_AMOUNT);
+        vm.stopPrank();
+    }
+
+    function test_UserCan_RedeemCollateral() public collateralDeposited {
+        uint256 startingUserCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
+        vm.startPrank(user);
+        dscEngine.redeemCollateral(weth, COLLATERAL_AMOUNT);
+        vm.stopPrank();
+
+        uint256 endingUserCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
+        assertGt(startingUserCollateralBalance, endingUserCollateralBalance);
+        assertEq(endingUserCollateralBalance, startingUserCollateralBalance - COLLATERAL_AMOUNT);
+    }
+
+    function test_RevertsIf_RedeemCollateral_BreaksHealthFactor() public collateralDeposited_DSCMinted {
+        vm.startPrank(user);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreaksHealthFactor.selector, 0));
+        dscEngine.redeemCollateral(weth, COLLATERAL_AMOUNT);
+        vm.stopPrank();
+    }
+
+    //////////////////////////////////////////////////////////
+    /////////////////////  Burn DSC Tests  ///////////////////
+    //////////////////////////////////////////////////////////
+    function test_RevertsIf_BurnDSC_ZeroAmount() public collateralDeposited {
+        vm.startPrank(user);
+        vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
+        dscEngine.burnDSC(0);
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_BurnDSC_WithoutMinting() public {
+        vm.startPrank(user);
+        vm.expectRevert();
+        dscEngine.burnDSC(COLLATERAL_AMOUNT);
+        vm.stopPrank();
+    }
+
+    function test_BurnDSC() public collateralDeposited_DSCMinted {
+        vm.startPrank(user);
+
+        // user will have dsCoin token
+        // user has to approve dscEngine to make transfer onBehalof of
+        // dscEngine gets the token from user and burns it
+        dsCoin.approve(address(dscEngine), BURN_DSC_AMOUNT);
+        dscEngine.burnDSC(BURN_DSC_AMOUNT);
+        vm.stopPrank();
+    }
+
+    function test_RevertsIfBurnDSC_MoreThanMinted() public collateralDeposited_DSCMinted {
+        vm.startPrank(user);
+        dsCoin.approve(address(dscEngine), BURN_DSC_AMOUNT);
+        vm.expectRevert();
+        dscEngine.burnDSC(BURN_DSC_AMOUNT * 1000e18); // user is trying to burn more than minted
+        vm.stopPrank();
+    }
+
+    //////////////////////////////////////////////////////////
+    ////////  Redeem Collateral And Burn DSC Tests  //////////
+    //////////////////////////////////////////////////////////
+    function test_UserCan_RedeemCollateral_BurnDSC_InOneTx() public collateralDeposited_DSCMinted {
+        vm.startPrank(user);
+        dsCoin.approve(address(dscEngine), BURN_DSC_AMOUNT);
+        dscEngine.redeemCollateralAndBurnDSC(weth, COLLATERAL_AMOUNT, BURN_DSC_AMOUNT);
+        vm.stopPrank();
     }
 }

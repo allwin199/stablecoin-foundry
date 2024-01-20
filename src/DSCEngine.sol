@@ -306,7 +306,7 @@ contract DSCEngine is ReentrancyGuard {
         s_collateralDepositedByUser[from][tokenCollateralAddress] -= amountCollateral;
         emit CollateralRedeemed(from, to, tokenCollateralAddress, amountCollateral);
 
-        // give the total collateral to the liquidator
+        // give the total collateral back to the liquidator
         bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
         if (!success) {
             revert DSCEngine__TransferFailed();
@@ -321,7 +321,7 @@ contract DSCEngine is ReentrancyGuard {
         // If not called by liquidation both onBehalfOf & dscFrom will be msg.sender
 
         // deducting DSC balance from bad user
-        s_DSCMinted[onBehalfOf] -= amountDscToBurn;
+        s_DSCMinted[onBehalfOf] = s_DSCMinted[onBehalfOf] - amountDscToBurn;
 
         // transferring DSC from the liquidator to this contract
         bool success = i_dsc.transferFrom(dscFrom, address(this), amountDscToBurn);
@@ -350,6 +350,13 @@ contract DSCEngine is ReentrancyGuard {
         // - get the VALUE of the totalCollateral deposited by the user
         // - get the totalDSC minted by the user
         (uint256 totalDSCMinted, uint256 totalCollateralValueInUSD) = _getAccountInformation(user);
+
+        // since totalDScMintes is 0
+        // we cannot divide by 0
+        // therfore let's return some big value
+        if (totalDSCMinted == 0) {
+            return type(uint256).max;
+        }
 
         // we need to make sure that user is always 200% overcollateralized
         uint256 collateralAdjustedForThreshold =
@@ -458,5 +465,9 @@ contract DSCEngine is ReentrancyGuard {
 
     function getDSCBalanceOfUser(address user) external view returns (uint256) {
         return s_DSCMinted[user];
+    }
+
+    function getUserHealthFactor(address user) public view returns (uint256) {
+        return _healthFactor(user);
     }
 }
