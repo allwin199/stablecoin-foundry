@@ -249,10 +249,8 @@ contract DSCEngine is ReentrancyGuard {
             revert DSCEngine__HealthFactorOk();
         }
 
-        uint256 endingUserHealthFactor = _healthFactor(user);
         // DSC value we have in terms of USD
         // but we need in terms of ETH
-
         uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
 
         // Bad User: $140 ETH is backing, $100 DSC
@@ -282,10 +280,13 @@ contract DSCEngine is ReentrancyGuard {
         _redeemCollateral(collateral, totalCollateralToRedeem, user, msg.sender);
         _burnDsc(debtToCover, user, msg.sender);
 
-        // This conditional should never hit, but just in case
+        uint256 endingUserHealthFactor = _healthFactor(user);
+
         if (endingUserHealthFactor <= startingUserHealthFactor) {
             revert DSCEngine__HealthFactorNotImproved();
         }
+
+        // we also have to check whether msg.sender health factor is also not broken because of liquidating
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
@@ -312,6 +313,7 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
+    /// @dev low-level internal function.
     function _burnDsc(uint256 amountDscToBurn, address onBehalfOf, address dscFrom) private {
         // onBehalfOf will be the bad user, if called from liquidation
         // dscFrom will be the liquidator

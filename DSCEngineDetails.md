@@ -81,5 +81,27 @@
     If user A is almost under collateralized
     Then user B can liquidate user A
     user B will pay of the debt aka DSC owned by user A
-    since user B is liquidating user A, user B will take all the remaining collateral from user A as an incentive
+    since user B is liquidating user A, user B will take get 10% incentive
+
+    Bad User: $140 ETH is backing, $100 DSC
+    debtToCover = $100 DSC
+    we need to get the value of value of $100 DSC in terms of ETH
+    1 ETH => 2000e18 in USD
+    $100/$2000 => 0.05e18
+    liquidator has to pay 0.05 ETH to liquidate this user
+
+    We have to give the liquidator 10% bonus
+    If DSC covered by liquidator is $100
+    10% of 100 = 10
+    they will get $110 worth in weth
+
+    110e18/2000e18 = 0.055 ETH
+    user gets incentive of 10% of 0.05 which is 0.005 for liquidating
+    0.05 + 0.005 = 0.055
+    by paying 0.05 ETH user gets back 0.055ETH
+
+    (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION
+    (0.05 ETH * 10)/100
+    0.055e18
+
 ```
