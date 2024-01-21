@@ -17,12 +17,14 @@ import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import {Handler} from "./Handler.t.sol";
 
 contract InvariantsTest is StdInvariant, Test {
     DeployDSCEngine private deployer;
     HelperConfig private helperConfig;
     DSCEngine private dscEngine;
     DecentralizedStableCoin private dsCoin;
+    Handler private handler;
 
     address private weth;
     address private wbtc;
@@ -41,9 +43,13 @@ contract InvariantsTest is StdInvariant, Test {
         deployer = new DeployDSCEngine();
         (dscEngine, dsCoin, helperConfig) = deployer.run();
 
+        handler = new Handler(dscEngine, dsCoin);
+
         (weth, wbtc, wethUsdPriceFeed, wbtcUsdPriceFeed, deployerKey) = helperConfig.activeNetworkConfig();
 
-        targetContract(address(dscEngine));
+        targetContract(address(handler));
+        // instead of targetting the dscEngine
+        // we are targetting the handler contract
 
         // we are minting some ERC20 tokens for the user
         vm.startPrank(msg.sender);
