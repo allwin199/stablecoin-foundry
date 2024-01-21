@@ -52,8 +52,8 @@ contract DSCEngineTest is Test {
     address private liquidator = makeAddr("liquidator");
     uint256 private constant STARTING_ERC20_BALANCE = 100e18;
     uint256 private constant COLLATERAL_AMOUNT = 10e18;
-    uint256 private constant MINT_DSC_AMOUNT = 1e18;
-    uint256 private constant BURN_DSC_AMOUNT = 1e18;
+    uint256 private constant MINT_DSC_AMOUNT = 100e18;
+    uint256 private constant BURN_DSC_AMOUNT = 100e18;
 
     function setUp() external {
         deployer = new DeployDSCEngine();
@@ -277,19 +277,15 @@ contract DSCEngineTest is Test {
         dscEngine.despositCollateralAndMintDSC(weth, COLLATERAL_AMOUNT, MINT_DSC_AMOUNT);
         vm.stopPrank();
 
-        uint256 userCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
-        assertEq(userCollateralBalance, COLLATERAL_AMOUNT, "depositCollateralAndMintDSC");
+        (uint256 totalDSCMinted, uint256 totalCollateralDeposited) = dscEngine.getAccountInformation(user);
 
-        uint256 dscBalanceOfUser = dscEngine.getDSCBalanceOfUser(user);
-        assertEq(dscBalanceOfUser, MINT_DSC_AMOUNT, "depositCollateralAndMintDSC");
-    }
+        // 1Eth = 2000e18
+        // 10e18 * 2000e18 = 20000e18
+        // uint256 userCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
+        assertEq(totalCollateralDeposited, 20000e18, "depositCollateralAndMintDSC");
 
-    function test_CheckHealthFactor() public collateralDeposited_DSCMinted {
-        vm.startPrank(user);
-        uint256 userHealthFactor = dscEngine.getUserHealthFactor(user);
-        vm.stopPrank();
-
-        assertGt(userHealthFactor, 1e18); // checking whether userHealthFactor > 1 after depositing and minting
+        // uint256 dscBalanceOfUser = dscEngine.getDSCBalanceOfUser(user);
+        assertEq(totalDSCMinted, MINT_DSC_AMOUNT, "depositCollateralAndMintDSC");
     }
 
     //////////////////////////////////////////////////////////
@@ -398,6 +394,26 @@ contract DSCEngineTest is Test {
         dsCoin.approve(address(dscEngine), BURN_DSC_AMOUNT);
         dscEngine.redeemCollateralAndBurnDSC(weth, COLLATERAL_AMOUNT, BURN_DSC_AMOUNT);
         vm.stopPrank();
+    }
+
+    //////////////////////////////////////////////////////////
+    /////////////////  Health Factor Tests  //////////////////
+    //////////////////////////////////////////////////////////
+
+    function test_ProperlyReports_HealthFactor() public collateralDeposited_DSCMinted {
+        // refer healthFactor() for more details
+        // minted = $100 worth of DSC for 10 Ether
+        // 10 ether in usd is 20000e18
+        // (20000 * 50) / 100 = 10000e18;
+        // (10000e18*1e18) / dsc_minted
+        // (10000e18 * 1e18 ) / 100e18
+        // 100e18
+
+        uint256 expectedHealthFactor = 100e18;
+
+        uint256 userHealthFactor = dscEngine.getUserHealthFactor(user);
+
+        assertEq(userHealthFactor, expectedHealthFactor); // checking whether userHealthFactor > 1 after depositing and minting
     }
 
     //////////////////////////////////////////////////////////

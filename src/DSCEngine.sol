@@ -339,7 +339,7 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////////////////////////////
 
     function _getAccountInformation(address user) private view returns (uint256, uint256) {
-        uint256 totalDSCMinted = s_DSCMinted[msg.sender];
+        uint256 totalDSCMinted = s_DSCMinted[user];
         uint256 totalCollateralValueInUsd = getAccountCollateralValue(user);
         return (totalDSCMinted, totalCollateralValueInUsd);
     }
@@ -470,5 +470,9 @@ contract DSCEngine is ReentrancyGuard {
 
     function getUserHealthFactor(address user) public view returns (uint256) {
         return _healthFactor(user);
+    }
+
+    function getAccountInformation(address user) public view returns (uint256, uint256) {
+        return _getAccountInformation(user);
     }
 }
