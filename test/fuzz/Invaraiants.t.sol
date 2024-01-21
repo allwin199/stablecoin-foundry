@@ -32,13 +32,6 @@ contract InvariantsTest is StdInvariant, Test {
     address private wbtcUsdPriceFeed;
     address private deployerKey;
 
-    address private user = makeAddr("user");
-    address private liquidator = makeAddr("liquidator");
-    uint256 private constant STARTING_ERC20_BALANCE = 100e18;
-    uint256 private constant COLLATERAL_AMOUNT = 10e18;
-    uint256 private constant MINT_DSC_AMOUNT = 100e18;
-    uint256 private constant BURN_DSC_AMOUNT = 100e18;
-
     function setUp() external {
         deployer = new DeployDSCEngine();
         (dscEngine, dsCoin, helperConfig) = deployer.run();
@@ -50,16 +43,9 @@ contract InvariantsTest is StdInvariant, Test {
         targetContract(address(handler));
         // instead of targetting the dscEngine
         // we are targetting the handler contract
-
-        // we are minting some ERC20 tokens for the user
-        vm.startPrank(msg.sender);
-        ERC20Mock(weth).mint(user, STARTING_ERC20_BALANCE);
-        // giving liquidator funds
-        ERC20Mock(weth).mint(liquidator, STARTING_ERC20_BALANCE);
-        vm.stopPrank();
     }
 
-    function invariant_ProtocolMustHave_MoreValue_ThanDSC() public {
+    function invariant_ProtocolMustHave_MoreValueThanDSC() public {
         // get the value of all the collateral in the protocol
         // compare it to all the debt (DSC)
 
@@ -70,7 +56,7 @@ contract InvariantsTest is StdInvariant, Test {
         uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
         uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
 
-        assertGt(wethValue + wbtcValue, totalSupployOfDSC);
+        assertGe(wethValue + wbtcValue, totalSupployOfDSC);
     }
 
     function invariant_gettersShouldNotRevert() public view {

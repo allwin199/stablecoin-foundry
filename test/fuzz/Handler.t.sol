@@ -21,7 +21,7 @@ contract Handler is Test {
 
     uint96 public constant MAX_DEPOSIT_SIZE = type(uint96).max;
     address[] public usersWithCollateralDeposited;
-    MockV3Aggregator public ethUsdPriceFeed;
+    // MockV3Aggregator public ethUsdPriceFeed;
 
     constructor(DSCEngine _dscEngine, DecentralizedStableCoin _dsCoin) {
         dscEngine = _dscEngine;
@@ -31,10 +31,33 @@ contract Handler is Test {
         weth = ERC20Mock(collateralTokens[0]);
         wbtc = ERC20Mock(collateralTokens[1]);
 
-        ethUsdPriceFeed = MockV3Aggregator(dscEngine.getCollateralTokenPriceFeed(address(weth)));
+        // ethUsdPriceFeed = MockV3Aggregator(dscEngine.getCollateralTokenPriceFeed(address(weth)));
     }
 
-    function depositCollateral(address randomCollateralToken, uint256 randomCollateralAmount) public {
-        dscEngine.depositCollateral(randomCollateralToken, randomCollateralAmount);
+    function depositCollateral(uint256 collateralSeed, uint256 randomCollateralAmount) public {
+        // collateralSeed and randomCollateralAmount will give soem random number
+        // but in our system only weth and wbtc are allowed
+        // using _getRandomCollateral etither weth or wbtc will be selected based on modulo
+        ERC20Mock collateral = _getRandomCollateral(collateralSeed);
+
+        uint256 collateralAmount = bound(randomCollateralAmount, 1, MAX_DEPOSIT_SIZE);
+        // we don't want to deposit with "0"
+
+        vm.startPrank(msg.sender);
+        collateral.mint(msg.sender, collateralAmount);
+        collateral.approve(address(dscEngine), collateralAmount);
+
+        dscEngine.depositCollateral(address(collateral), collateralAmount);
+        usersWithCollateralDeposited.push(msg.sender);
+        vm.stopPrank();
+    }
+
+    // Helper Functions
+    function _getRandomCollateral(uint256 collateralSeed) private view returns (ERC20Mock) {
+        if (collateralSeed % 2 == 0) {
+            return weth;
+        } else {
+            return wbtc;
+        }
     }
 }
