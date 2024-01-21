@@ -411,7 +411,7 @@ contract DSCEngineTest is Test {
 
         uint256 expectedHealthFactor = 100e18;
 
-        uint256 userHealthFactor = dscEngine.getUserHealthFactor(user);
+        uint256 userHealthFactor = dscEngine.getHealthFactor(user);
 
         assertEq(userHealthFactor, expectedHealthFactor); // checking whether userHealthFactor > 1 after depositing and minting
     }

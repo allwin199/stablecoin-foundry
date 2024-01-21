@@ -344,15 +344,12 @@ contract DSCEngine is ReentrancyGuard {
         return (totalDSCMinted, totalCollateralValueInUsd);
     }
 
-    /// @notice Returns how close to liquidation a user is
-    /// @notice If a user goes below `MINIMUM_THRESHOLD`, they can get liquidated
-    function _healthFactor(address user) internal view returns (uint256) {
-        // 1. To calculate the health factor of the user
-        // - get the VALUE of the totalCollateral deposited by the user
-        // - get the totalDSC minted by the user
-        (uint256 totalDSCMinted, uint256 totalCollateralValueInUSD) = _getAccountInformation(user);
-
-        // since totalDScMintes is 0
+    function _calculateHealthFactor(uint256 totalDSCMinted, uint256 totalCollateralValueInUSD)
+        internal
+        pure
+        returns (uint256)
+    {
+        // If totalDScMinted is 0
         // we cannot divide by 0
         // therfore let's return some big value
         if (totalDSCMinted == 0) {
@@ -388,6 +385,17 @@ contract DSCEngine is ReentrancyGuard {
         // 100e18 > 1e18
 
         return healthFactor;
+    }
+
+    /// @notice Returns how close to liquidation a user is
+    /// @notice If a user goes below `MINIMUM_THRESHOLD`, they can get liquidated
+    function _healthFactor(address user) internal view returns (uint256) {
+        // 1. To calculate the health factor of the user
+        // - get the VALUE of the totalCollateral deposited by the user
+        // - get the totalDSC minted by the user
+        (uint256 totalDSCMinted, uint256 totalCollateralValueInUSD) = _getAccountInformation(user);
+
+        return _calculateHealthFactor(totalDSCMinted, totalCollateralValueInUSD);
     }
 
     // 1. Check health factor (do they have enough collateral?)
@@ -468,7 +476,7 @@ contract DSCEngine is ReentrancyGuard {
         return s_DSCMinted[user];
     }
 
-    function getUserHealthFactor(address user) public view returns (uint256) {
+    function getHealthFactor(address user) public view returns (uint256) {
         return _healthFactor(user);
     }
 
