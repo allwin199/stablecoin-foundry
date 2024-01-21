@@ -18,7 +18,7 @@ import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
-contract OpenInvariantsTest is StdInvariant, Test {
+contract InvariantsTest is StdInvariant, Test {
     DeployDSCEngine private deployer;
     HelperConfig private helperConfig;
     DSCEngine private dscEngine;
@@ -53,22 +53,24 @@ contract OpenInvariantsTest is StdInvariant, Test {
         vm.stopPrank();
     }
 
-    // function invariant_ProtocolMustHave_MoreValue_ThanDSC() public {
-    //     // get the value of all the collateral in the protocol
-    //     // compare it to all the debt (DSC)
+    function invariant_ProtocolMustHave_MoreValue_ThanDSC() public {
+        // get the value of all the collateral in the protocol
+        // compare it to all the debt (DSC)
 
-    //     uint256 totalSupployOfDSC = dsCoin.totalSupply();
-    //     uint256 totalWethDeposited = IERC20(weth).balanceOf(address(dscEngine));
-    //     uint256 totalWbtcDeposited = IERC20(wbtc).balanceOf(address(dscEngine));
+        uint256 totalSupployOfDSC = dsCoin.totalSupply();
+        uint256 totalWethDeposited = IERC20(weth).balanceOf(address(dscEngine));
+        uint256 totalWbtcDeposited = IERC20(wbtc).balanceOf(address(dscEngine));
 
-    //     uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
-    //     uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
+        uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
+        uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
 
-    //     // assertGt(wethValue + wbtcValue, totalSupployOfDSC);
-    // }
+        assertGt(wethValue + wbtcValue, totalSupployOfDSC);
+    }
 
-    // for open based testing, keep fail_on_revert as false
-    // open based invariant testing test functions randomly
-    // according to our contract, random testing will not work
-    // redeemCollateral cannot be called before depositCollateral
+    function invariant_gettersShouldNotRevert() public view {
+        dscEngine.getLiquidationThreshold();
+        dscEngine.getAdditionalFeedPrecision();
+    }
 }
+
+// for open based testing, keep fail_on_revert as false
