@@ -54,6 +54,12 @@ contract DSCEngineTest is Test {
     uint256 private constant COLLATERAL_AMOUNT = 10e18;
     uint256 private constant MINT_DSC_AMOUNT = 100e18;
     uint256 private constant BURN_DSC_AMOUNT = 100e18;
+    uint256 private constant LIQUIDATION_PRECISION = 100;
+    uint256 private constant LIQUIDATION_THRESHOLD = 50;
+    uint256 private constant LIQUIDATION_BONUS = 10;
+    uint256 private constant MIN_HEALTH_FACTOR = 1e18;
+    uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
+    uint256 private constant PRECISION = 1e18;
 
     function setUp() external {
         deployer = new DeployDSCEngine();
@@ -439,5 +445,45 @@ contract DSCEngineTest is Test {
         vm.expectRevert(DSCEngine.DSCEngine__HealthFactorOk.selector);
         dscEngine.liquidate(weth, user, MINT_DSC_AMOUNT);
         vm.stopPrank();
+    }
+
+    //////////////////////////////////////////////////////////
+    /////////////////  Getter Function Tests  ////////////////
+    //////////////////////////////////////////////////////////
+
+    function test_GetMinHealthFactor() public {
+        uint256 minHealthFactor = dscEngine.getMinHealthFactor();
+        assertEq(minHealthFactor, MIN_HEALTH_FACTOR);
+    }
+
+    function test_GetLiquidationThreshold() public {
+        uint256 liquidationThreshold = dscEngine.getLiquidationThreshold();
+        assertEq(liquidationThreshold, LIQUIDATION_THRESHOLD);
+    }
+
+    function test_GetDsc() public {
+        address dscAddress = dscEngine.getDSC();
+        assertEq(dscAddress, address(dsCoin));
+    }
+
+    function test_GetAdditionFeedPrecision() public {
+        uint256 additionalFeedPrecision = dscEngine.getAdditionalFeedPrecision();
+        assertEq(additionalFeedPrecision, ADDITIONAL_FEED_PRECISION);
+    }
+
+    function test_GetPrecision() public {
+        uint256 precision = dscEngine.getPrecision();
+        assertEq(precision, PRECISION);
+    }
+
+    function test_GetAccountCollateralValue() public collateralDeposited {
+        uint256 collateralValue = dscEngine.getAccountCollateralValue(user);
+        uint256 expectedCollateralValue = dscEngine.getUsdValue(weth, COLLATERAL_AMOUNT);
+        assertEq(collateralValue, expectedCollateralValue, "accountCollateralValue");
+    }
+
+    function test_GetCollateralTokens() public {
+        address[] memory collateralTokens = dscEngine.getCollateralTokens();
+        assertEq(collateralTokens[0], weth);
     }
 }

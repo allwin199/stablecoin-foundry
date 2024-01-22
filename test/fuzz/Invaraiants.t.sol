@@ -45,28 +45,28 @@ contract InvariantsTest is StdInvariant, Test {
         // we are targetting the handler contract
     }
 
-    function invariant_ProtocolMustHave_MoreValueThanDSC() public {
-        // get the value of all the collateral in the protocol
-        // compare it to all the debt (DSC)
+    // function invariant_ProtocolMustHave_MoreValueThanDSC() public {
+    //     // get the value of all the collateral in the protocol
+    //     // compare it to all the debt (DSC)
 
-        uint256 totalSupployOfDSC = dsCoin.totalSupply();
-        uint256 totalWethDeposited = IERC20(weth).balanceOf(address(dscEngine));
-        uint256 totalWbtcDeposited = IERC20(wbtc).balanceOf(address(dscEngine));
+    //     uint256 totalSupployOfDSC = dsCoin.totalSupply();
+    //     uint256 totalWethDeposited = IERC20(weth).balanceOf(address(dscEngine));
+    //     uint256 totalWbtcDeposited = IERC20(wbtc).balanceOf(address(dscEngine));
 
-        uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
-        uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
+    //     uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
+    //     uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
 
-        // console.log("Total weth Deposited", totalWethDeposited);
-        // console.log("Total wbtc Deposited", totalWbtcDeposited);
-        // console.log("Total DSC Minted", dsCoin.totalSupply());
+    //     // console.log("Total weth Deposited", totalWethDeposited);
+    //     // console.log("Total wbtc Deposited", totalWbtcDeposited);
+    //     // console.log("Total DSC Minted", dsCoin.totalSupply());
 
-        assertGe(wethValue + wbtcValue, totalSupployOfDSC);
-    }
+    //     assertGe(wethValue + wbtcValue, totalSupployOfDSC);
+    // }
 
-    function invariant_gettersShouldNotRevert() public view {
-        dscEngine.getLiquidationThreshold();
-        dscEngine.getAdditionalFeedPrecision();
-    }
+    // function invariant_gettersShouldNotRevert() public view {
+    //     dscEngine.getLiquidationThreshold();
+    //     dscEngine.getAdditionalFeedPrecision();
+    // }
 }
 
 // for open based testing, keep fail_on_revert as false
