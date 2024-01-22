@@ -32,6 +32,7 @@ import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {OracleLib} from "./libraries/OracleLib.sol";
 
 /// @title DSCEngine
 /// @author Prince Allwin
@@ -66,6 +67,11 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__HealthFactorOk();
     error DSCEngine__HealthFactorNotImproved();
     error DSCEngine__BurnDSC_TransferFailed();
+
+    //////////////////////////////////////////////////////////
+    ///////////////////////  Types  //////////////////////////
+    //////////////////////////////////////////////////////////
+    using OracleLib for AggregatorV3Interface;
 
     //////////////////////////////////////////////////////////
     ///////////////////////  Events  /////////////////////////
@@ -428,7 +434,7 @@ contract DSCEngine is ReentrancyGuard {
     function getUsdValue(address token, uint256 amount) public view returns (uint256) {
         // refer priceFeed in fundeMe
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
-        (, int256 price,,,) = priceFeed.latestRoundData();
+        (, int256 price,,,) = priceFeed.staleCheckLatestRoundData();
         // price will be 8 decimals
         // but ether is 18 decimals
         // so we have to do uint256(price) * 1e10
@@ -447,7 +453,7 @@ contract DSCEngine is ReentrancyGuard {
 
     function getTokenAmountFromUsd(address token, uint256 usdAmountInWei) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
-        (, int256 price,,,) = priceFeed.latestRoundData();
+        (, int256 price,,,) = priceFeed.staleCheckLatestRoundData();
         // $100e18 USD Debt
         // 1 ETH = 2000 USD
         // The returned value from Chainlink will be 2000 * 1e8
