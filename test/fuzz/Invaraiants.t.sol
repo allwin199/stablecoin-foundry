@@ -9,7 +9,7 @@ pragma solidity 0.8.20;
 
 // Getter view functions should never revert <- evergreen invariant
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
 import {DeployDSCEngine} from "../../script/DeployDSCEngine.s.sol";
 import {DSCEngine} from "../../src/DSCEngine.sol";
@@ -55,6 +55,10 @@ contract InvariantsTest is StdInvariant, Test {
 
         uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
         uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
+
+        // console.log("Total weth Deposited", totalWethDeposited);
+        // console.log("Total wbtc Deposited", totalWbtcDeposited);
+        // console.log("Total DSC Minted", dsCoin.totalSupply());
 
         assertGe(wethValue + wbtcValue, totalSupployOfDSC);
     }

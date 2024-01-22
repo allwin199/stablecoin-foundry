@@ -20,7 +20,6 @@ contract Handler is Test {
     ERC20Mock wbtc;
 
     uint96 public constant MAX_DEPOSIT_SIZE = type(uint96).max;
-    address[] public usersWithCollateralDeposited;
     // MockV3Aggregator public ethUsdPriceFeed;
 
     constructor(DSCEngine _dscEngine, DecentralizedStableCoin _dsCoin) {
@@ -48,7 +47,6 @@ contract Handler is Test {
         collateral.approve(address(dscEngine), collateralAmount);
 
         dscEngine.depositCollateral(address(collateral), collateralAmount);
-        usersWithCollateralDeposited.push(msg.sender);
         vm.stopPrank();
     }
 
@@ -69,6 +67,16 @@ contract Handler is Test {
 
         vm.startPrank(msg.sender);
         dscEngine.redeemCollateral(address(collateral), amountCollateral);
+        vm.stopPrank();
+    }
+
+    function mint(uint256 randomDSCAmount) public {
+        // dscAmount cannot exceed collateral balance in USD
+        uint256 dscAmount = bound(randomDSCAmount, 1, MAX_DEPOSIT_SIZE);
+
+        vm.startPrank(msg.sender);
+        // minting DSC
+        dscEngine.mintDSC(dscAmount);
         vm.stopPrank();
     }
 
