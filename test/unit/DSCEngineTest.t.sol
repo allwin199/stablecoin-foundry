@@ -11,6 +11,7 @@ import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
 import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
 import {MockFailedMintDSC} from "../mocks/MockFailedMintDSC.sol";
+import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 
 contract DSCEngineTest is Test {
     //////////////////////////////////////////////////////////
@@ -49,7 +50,6 @@ contract DSCEngineTest is Test {
     address private deployerKey;
 
     address private user = makeAddr("user");
-    address private liquidator = makeAddr("liquidator");
     uint256 private constant STARTING_ERC20_BALANCE = 100e18;
     uint256 private constant COLLATERAL_AMOUNT = 10e18;
     uint256 private constant MINT_DSC_AMOUNT = 100e18;
@@ -60,6 +60,11 @@ contract DSCEngineTest is Test {
     uint256 private constant MIN_HEALTH_FACTOR = 1e18;
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant PRECISION = 1e18;
+
+    // Liquidate
+    address public liquidator = makeAddr("liquidator");
+    uint256 public liquidatorBalance = 100e18;
+    uint256 public constant COLLATERAL_TO_COVER = 20e18;
 
     function setUp() external {
         deployer = new DeployDSCEngine();
@@ -422,6 +427,34 @@ contract DSCEngineTest is Test {
         assertEq(userHealthFactor, expectedHealthFactor); // checking whether userHealthFactor > 1 after depositing and minting
     }
 
+    function test_HealthFactor_CanGo_BelowOne() public collateralDeposited_DSCMinted {
+        int256 ethUsdUpdatedPrice = 18e8; // 1 ETH = $18
+        // Rememeber, we need $200 at all times if we have $100 of debt
+
+        // while the user was depositing collateral and minting DSC
+        // 1 ETH = $2000e8
+        // now we are crashing the price to $18e8
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(ethUsdUpdatedPrice);
+
+        // since ETH price has dropped
+        // user will not be overcollateralized
+        // user healthFactor will be below 1
+
+        uint256 userHealthFactor = dscEngine.getHealthFactor(user);
+
+        // minted = $100 worth of DSC for 10 Ether
+        // 1 ether in usd is 18e18
+        // 10 ether in usd is 180e18
+        // (180 * 50) / 100 = 90e18;
+        // (90e18*1e18) / dsc_minted
+        // (90e18 * 1e18 ) / 100e18
+        // 0.9e18
+
+        uint256 expectedHealthFactor = 0.9e18;
+
+        assertEq(userHealthFactor, expectedHealthFactor);
+    }
+
     //////////////////////////////////////////////////////////
     ////////////////////  Liquidate Tests  ///////////////////
     //////////////////////////////////////////////////////////
@@ -445,6 +478,60 @@ contract DSCEngineTest is Test {
         vm.expectRevert(DSCEngine.DSCEngine__HealthFactorOk.selector);
         dscEngine.liquidate(weth, user, MINT_DSC_AMOUNT);
         vm.stopPrank();
+    }
+
+    modifier liquidated() {
+        vm.startPrank(user);
+
+        // when depositing collateral
+        // dscEngine will call transferFrom on behalf of user
+        // therfore user has to approve dscEngine
+        ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_AMOUNT);
+        dscEngine.despositCollateralAndMintDSC(weth, COLLATERAL_AMOUNT, MINT_DSC_AMOUNT);
+
+        vm.stopPrank();
+
+        // let's tank the ETH price
+        int256 updatedEthValue = 18e8; // 1ETH = $18
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(updatedEthValue);
+        // 1 ETH used to be $2000e8
+        // now it is $18e8
+
+        // since ETH price has tanked there is a chance that user can be liquidated
+        // because he will not be 200% overcollateralized
+        // user's healthFactor can be below 0
+
+        // liquidator need ERC2O tokens to deposit
+        ERC20Mock(weth).mint(liquidator, COLLATERAL_TO_COVER);
+
+        vm.startPrank(liquidator);
+
+        //liquidator has to approve dscEngine to call transferFrom
+        ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_TO_COVER);
+        dscEngine.despositCollateralAndMintDSC(weth, COLLATERAL_TO_COVER, MINT_DSC_AMOUNT);
+        // liquidator has deposited collateral and minted DSC
+
+        // when liquidator tries to cover the bebt of user
+        // totalDebt amount will be deducted from liquidator account in dsCoin
+        // it will be transferred to dscEngine account in dsCoin
+        // remember ERC2O keeps of account and balances in mapping.
+        // dscEngine will be calling transferFrom on behalf of liquidator
+        // liquidator has to approve dscEngine
+        dsCoin.approve(address(dscEngine), MINT_DSC_AMOUNT);
+
+        // liquidator is calling the liquidate function
+        // If the healfactor of user is below MIN_HEALTH
+        // liquidator can liquidate the user
+        dscEngine.liquidate(weth, user, MINT_DSC_AMOUNT);
+
+        vm.stopPrank();
+
+        _;
+    }
+
+    function test_UserHas_NoMoreDebt() public liquidated {
+        (uint256 userDscMinted,) = dscEngine.getAccountInformation(user);
+        assertEq(userDscMinted, 0, "userHasNoDebtAfterLiquidation");
     }
 
     //////////////////////////////////////////////////////////

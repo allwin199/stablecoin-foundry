@@ -330,7 +330,9 @@ contract DSCEngine is ReentrancyGuard {
         // deducting DSC balance from bad user
         s_DSCMinted[onBehalfOf] = s_DSCMinted[onBehalfOf] - amountDscToBurn;
 
-        // transferring DSC from the liquidator to this contract
+        // transferring DSC from the liquidator to dscEngine
+        // to make this transfer, dscEngine will call transferFrom on behalf of liquidator
+        // liquidator has to approve dscEngine
         bool success = i_dsc.transferFrom(dscFrom, address(this), amountDscToBurn);
         // This conditional is hypothetically unreachable
         if (!success) {
