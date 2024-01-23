@@ -12,6 +12,7 @@ import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
 import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
 import {MockFailedMintDSC} from "../mocks/MockFailedMintDSC.sol";
 import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
+import {MockMoreDebtDSC} from "../mocks/MockMoreDebtDSC.sol";
 
 contract DSCEngineTest is Test {
     //////////////////////////////////////////////////////////
@@ -532,6 +533,20 @@ contract DSCEngineTest is Test {
     function test_UserHas_NoMoreDebt() public liquidated {
         (uint256 userDscMinted,) = dscEngine.getAccountInformation(user);
         assertEq(userDscMinted, 0, "userHasNoDebtAfterLiquidation");
+    }
+
+    function test_UserStillHas_SomeETH_AfterLiquidation() public liquidated {
+        uint256 tokenAmountFromDebtCovered = dscEngine.getTokenAmountFromUsd(weth, MINT_DSC_AMOUNT);
+        uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
+        uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
+
+        uint256 usdAmountLiquidated = dscEngine.getUsdValue(weth, totalCollateralToRedeem);
+        uint256 expectedUserCollateralValueInUsd =
+            dscEngine.getUsdValue(weth, COLLATERAL_AMOUNT) - (usdAmountLiquidated);
+
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(user);
+
+        assertEq(collateralValueInUsd, expectedUserCollateralValueInUsd);
     }
 
     //////////////////////////////////////////////////////////
