@@ -41,15 +41,15 @@ contract DecentralizedStableCoinTest is Test {
     }
 
     function test_Minting_UpdatesUserBalance() public {
-        // ARRANGE
+        // Arrange
         vm.startPrank(user);
         uint256 prevUserBalance = dSCoin.balanceOf(user);
 
-        // ACT
+        // Act
         dSCoin.mint(user, MINT_AMOUNT);
         uint256 currentUserBalance = dSCoin.balanceOf(user);
 
-        // ASSERT
+        // Assert
         assertGt(currentUserBalance, prevUserBalance);
         vm.stopPrank();
     }
@@ -82,17 +82,17 @@ contract DecentralizedStableCoinTest is Test {
     }
 
     function test_Burning_UpdatesUserBalance() public {
-        // ARRANGE
+        // Arrange
         vm.startPrank(user);
 
-        // ACT
+        // Act
         dSCoin.mint(user, MINT_AMOUNT);
         uint256 prevUserBalance = dSCoin.balanceOf(user);
 
         dSCoin.burn(MINT_AMOUNT);
         uint256 currentUserBalance = dSCoin.balanceOf(user);
 
-        // ASSERT
+        // Assert
         assertGt(prevUserBalance, currentUserBalance);
         assertEq(currentUserBalance, 0);
         vm.stopPrank();

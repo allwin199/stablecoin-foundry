@@ -162,7 +162,7 @@ contract DSCEngine is ReentrancyGuard {
         isAllowedToken(tokenCollateralAddress)
         nonReentrant
     {
-        /// @dev since we have more than one token user can use for collateral
+        /// @dev since we have more than one token for collateral
         /// @dev we have to track the user and the token and then the amount.
         s_collateralDepositedByUser[msg.sender][tokenCollateralAddress] +=
             s_collateralDepositedByUser[msg.sender][tokenCollateralAddress] + amountCollateral;
@@ -399,7 +399,7 @@ contract DSCEngine is ReentrancyGuard {
     /// @notice If a user goes below `MINIMUM_THRESHOLD`, they can get liquidated
     function _healthFactor(address user) internal view returns (uint256) {
         // 1. To calculate the health factor of the user
-        // - get the VALUE of the totalCollateral deposited by the user
+        // - get the USD VALUE of the totalCollateral deposited by the user
         // - get the totalDSC minted by the user
         (uint256 totalDSCMinted, uint256 totalCollateralValueInUSD) = _getAccountInformation(user);
 
@@ -420,11 +420,12 @@ contract DSCEngine is ReentrancyGuard {
     //////////  Public & External View Functions  ////////////
     //////////////////////////////////////////////////////////
 
-    function getAccountCollateralValue(address user) public view returns (uint256 totalCollateralValueInUSD) {
+    function getAccountCollateralValue(address user) public view returns (uint256) {
         // since we have more than one collateral tokens
         // we have to loop through each token and get the amount they have deposited
         // and map it to the price, to get the USD value
         address[] memory collateralTokens = s_collateralTokens;
+        uint256 totalCollateralValueInUSD;
         for (uint256 i = 0; i < collateralTokens.length; i++) {
             address token = collateralTokens[i];
             uint256 amount = s_collateralDepositedByUser[user][token];

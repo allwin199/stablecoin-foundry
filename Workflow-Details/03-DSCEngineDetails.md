@@ -21,7 +21,7 @@
 
 -   Before minting DSC, user should have more collateral value than minimum threshold
 
-```sol
+```solidity
     uint256 private constant LIQUIDATION_THRESHOLD = 50; //user should be 200% overcollateralized
     uint256 private constant LIQUIDATION_PRECISION = 100;
 
