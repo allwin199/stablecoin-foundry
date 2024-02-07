@@ -44,7 +44,7 @@ import {OracleLib} from "./libraries/OracleLib.sol";
 /// - Algorathmically Stable
 /// It is similar to DAI if DAI had no governance, no fees, and was only backed by wETH & wBTC.
 
-/// @notice Our DSC system should be "overcollateralized". At no point, should the value of all collateral <= the $backed value of all the DSC.
+/// @notice Our DSC system should be "overcollateralized". At no point, should the value of all collateral <= the dollar backed value of all the DSC.
 
 /// @notice This contract is the core of the DSC System.
 /// It handles all the logic for minting, Burning and redeeming DSC

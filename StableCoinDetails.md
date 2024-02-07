@@ -7,8 +7,8 @@
 1. (Relative Stability) => Anchored or Pegged to USD
     - our 1 stable coin will always worth $1
     - we should write a code to make sure 1 stable coin == $1
-    - To make sure 1 stable coin is equivalent to $1 we can use chainlink priceFeed
-    - After getting the priceFeed we set a function to echange ETH & BTC or whatever their dollar equivalent is
+    - To make sure 1 stable coin is equivalent to $1 we can use chainlink priceFeeds
+    - After getting the priceFeed we set a function to echange ETH & BTC for whatever their dollar equivalent is
 
 ---
 
