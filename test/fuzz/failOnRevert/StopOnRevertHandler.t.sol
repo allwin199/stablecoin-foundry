@@ -6,11 +6,11 @@ pragma solidity 0.8.20;
 import {Test, console2, console} from "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
 
-import {DSCEngine} from "../../src/DSCEngine.sol";
-import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
-import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {DSCEngine} from "../../../src/DSCEngine.sol";
+import {DecentralizedStableCoin} from "../../../src/DecentralizedStableCoin.sol";
+import {HelperConfig} from "../../../script/HelperConfig.s.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
-import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
+import {MockV3Aggregator} from "../../mocks/MockV3Aggregator.sol";
 
 contract Handler is Test {
     DSCEngine public dscEngine;
@@ -21,6 +21,8 @@ contract Handler is Test {
 
     uint96 public constant MAX_DEPOSIT_SIZE = type(uint96).max;
     // MockV3Aggregator public ethUsdPriceFeed;
+
+    address[] usersWithCollateralDeposited;
 
     constructor(DSCEngine _dscEngine, DecentralizedStableCoin _dsCoin) {
         dscEngine = _dscEngine;
@@ -50,6 +52,8 @@ contract Handler is Test {
 
         dscEngine.depositCollateral(address(collateral), collateralAmount);
         vm.stopPrank();
+
+        usersWithCollateralDeposited.push(msg.sender);
     }
 
     function redeemCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
@@ -66,21 +70,29 @@ contract Handler is Test {
         if (amountCollateral == 0) {
             return;
         }
+        // the reason we might get amountCollateral as 0 is
+        // fuzzing may try to differnt account that doesn't deposited any collateral.
 
         vm.startPrank(msg.sender);
         dscEngine.redeemCollateral(address(collateral), amountCollateral);
         vm.stopPrank();
     }
 
-    // function mint(uint256 randomDSCAmount) public {
-    //     // dscAmount cannot exceed collateral balance in USD
-    //     uint256 dscAmount = bound(randomDSCAmount, 1, MAX_DEPOSIT_SIZE);
+    function mint(uint256 randomDSCAmount, uint256 addressSeed) public {
+        if (usersWithCollateralDeposited.length == 0) {
+            return;
+        }
 
-    //     vm.startPrank(msg.sender);
-    //     // minting DSC
-    //     dscEngine.mintDSC(dscAmount);
-    //     vm.stopPrank();
-    // }
+        address sender = usersWithCollateralDeposited[addressSeed % usersWithCollateralDeposited.length];
+
+        // dscAmount cannot exceed collateral balance in USD
+        uint256 dscAmount = bound(randomDSCAmount, 1, MAX_DEPOSIT_SIZE);
+
+        vm.startPrank(sender);
+        // minting DSC
+        dscEngine.mintDSC(dscAmount);
+        vm.stopPrank();
+    }
 
     // Helper Functions
     function _getRandomCollateral(uint256 collateralSeed) private view returns (ERC20Mock) {
