@@ -239,7 +239,7 @@ contract DSCEngine is ReentrancyGuard {
     /// @param user The user who has broken the healthFactor. Their healthfactor should be below MIN_HEALTH_FACTOR
     /// @param debtToCover The amount of DSC you want to burn to improve the users health factor
     /// @notice You can partially liquidate a user
-    /// @notice You will get a 10% liquidation bonus for taking the users funds
+    /// @notice You will get a 10% liquidation bonus for covering the users funds
     /// @notice This function working assumes the protocol will be roughly 200% overcollateralized in order for this to work
     /// @notice The reason protocol should be overcollateralized is, we should incentivize the liquidator
     /// @notice A known bug would be if the protocol was only 100% collateralized, we wouldn't be able to liquidate anyone
@@ -257,7 +257,7 @@ contract DSCEngine is ReentrancyGuard {
         }
 
         // DSC value we have in terms of USD
-        // but we need in terms of ETH
+        // but we need in terms of ETH because the liquidator will debt amount in ETH
         uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
 
         // Bad User: $140 ETH is backing, $100 DSC
@@ -309,11 +309,12 @@ contract DSCEngine is ReentrancyGuard {
 
         // If not called by liquidation both from & to will be msg.sender
 
-        // we have to detect the collateral from bad user
-        s_collateralDepositedByUser[from][tokenCollateralAddress] -= amountCollateral;
+        // we have to reduce the collateral amount from bad user if called from liquidation
+        s_collateralDepositedByUser[from][tokenCollateralAddress] =
+            s_collateralDepositedByUser[from][tokenCollateralAddress] - amountCollateral;
         emit CollateralRedeemed(from, to, tokenCollateralAddress, amountCollateral);
 
-        // give the total collateral back to the liquidator
+        // give the total collateral with bonus back to the liquidator
         bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
         if (!success) {
             revert DSCEngine__RedeemCollateral_TransferFailed();
@@ -465,7 +466,7 @@ contract DSCEngine is ReentrancyGuard {
 
         // let'say valueOfEthInUsd = 2000e18;
         // usdAmountInWei = 1000e18;
-        // tokenAmountFromUsd = 1000e18 * 2000e18 = 0.5
+        // tokenAmountFromUsd = 1000e18 / 2000e18 = 0.5
         // above method is wrong, we need all the values in wei which is 18 decimals
         // tokenAmountFromUsd = (1000e18 * 1e18 )/ 2000e18 = 1000e36/2000e18 = 0.5e18
 
