@@ -44,6 +44,8 @@ contract OpenInvariantsTest is StdInvariant, Test {
         (weth, wbtc, wethUsdPriceFeed, wbtcUsdPriceFeed, deployerKey) = helperConfig.activeNetworkConfig();
 
         targetContract(address(dscEngine));
+        // our target contract is dscEngine
+        // fuzz will pick function randomly and test
 
         // we are minting some ERC20 tokens for the user
         vm.startPrank(msg.sender);
@@ -64,7 +66,7 @@ contract OpenInvariantsTest is StdInvariant, Test {
     //     uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
     //     uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
 
-    //     // assertGt(wethValue + wbtcValue, totalSupployOfDSC);
+    //     assertGe(wethValue + wbtcValue, totalSupployOfDSC);
     // }
 
     // for open based testing, keep fail_on_revert as false
