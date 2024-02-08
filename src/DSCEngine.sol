@@ -358,7 +358,7 @@ contract DSCEngine is ReentrancyGuard {
         pure
         returns (uint256)
     {
-        // If totalDScMinted is 0
+        // If totalDScMinted is 0 but they have collateral deposited
         // we cannot divide by 0
         // therfore let's return some big value
         if (totalDSCMinted == 0) {
