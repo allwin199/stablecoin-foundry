@@ -94,6 +94,25 @@ contract Handler is Test {
         vm.stopPrank();
     }
 
+    function liquidate(uint256 collateralSeed, address userToBeLiquidated, uint256 debtToCover) public {
+        uint256 minHealthFactor = dscEngine.getMinHealthFactor();
+        uint256 userHealthFactor = dscEngine.getHealthFactor(userToBeLiquidated);
+        if (userHealthFactor >= minHealthFactor) {
+            return;
+        }
+        debtToCover = bound(debtToCover, 1, uint256(type(uint96).max));
+        ERC20Mock collateral = _getRandomCollateral(collateralSeed);
+        dscEngine.liquidate(address(collateral), userToBeLiquidated, debtToCover);
+    }
+
+    // function updateCollateralPrice(uint96 newPrice, uint256 collateralSeed) public {
+    //     int256 intNewPrice = int256(uint256(newPrice));
+    //     ERC20Mock collateral = _getRandomCollateral(collateralSeed);
+    //     MockV3Aggregator priceFeed = MockV3Aggregator(dscEngine.getCollateralTokenPriceFeed(address(collateral)));
+
+    //     priceFeed.updateAnswer(intNewPrice);
+    // }
+
     // Helper Functions
     function _getRandomCollateral(uint256 collateralSeed) private view returns (ERC20Mock) {
         if (collateralSeed % 2 == 0) {

@@ -22,6 +22,8 @@ contract Handler is Test {
     uint96 public constant MAX_DEPOSIT_SIZE = type(uint96).max;
     // MockV3Aggregator public ethUsdPriceFeed;
 
+    address[] usersWithCollateralDeposited;
+
     constructor(DSCEngine _dscEngine, DecentralizedStableCoin _dsCoin) {
         dscEngine = _dscEngine;
         dsCoin = _dsCoin;
@@ -50,6 +52,8 @@ contract Handler is Test {
 
         dscEngine.depositCollateral(address(collateral), collateralAmount);
         vm.stopPrank();
+
+        usersWithCollateralDeposited.push(msg.sender);
     }
 
     function redeemCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
@@ -74,11 +78,17 @@ contract Handler is Test {
         vm.stopPrank();
     }
 
-    function mint(uint256 randomDSCAmount) public {
+    function mint(uint256 randomDSCAmount, uint256 addressSeed) public {
+        if (usersWithCollateralDeposited.length == 0) {
+            return;
+        }
+
+        address sender = usersWithCollateralDeposited[addressSeed % usersWithCollateralDeposited.length];
+
         // dscAmount cannot exceed collateral balance in USD
         uint256 dscAmount = bound(randomDSCAmount, 1, MAX_DEPOSIT_SIZE);
 
-        vm.startPrank(msg.sender);
+        vm.startPrank(sender);
         // minting DSC
         dscEngine.mintDSC(dscAmount);
         vm.stopPrank();
@@ -94,6 +104,14 @@ contract Handler is Test {
         ERC20Mock collateral = _getRandomCollateral(collateralSeed);
         dscEngine.liquidate(address(collateral), userToBeLiquidated, debtToCover);
     }
+
+    // function updateCollateralPrice(uint96 newPrice, uint256 collateralSeed) public {
+    //     int256 intNewPrice = int256(uint256(newPrice));
+    //     ERC20Mock collateral = _getRandomCollateral(collateralSeed);
+    //     MockV3Aggregator priceFeed = MockV3Aggregator(dscEngine.getCollateralTokenPriceFeed(address(collateral)));
+
+    //     priceFeed.updateAnswer(intNewPrice);
+    // }
 
     // Helper Functions
     function _getRandomCollateral(uint256 collateralSeed) private view returns (ERC20Mock) {
