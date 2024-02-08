@@ -52,25 +52,25 @@ contract Handler is Test {
         vm.stopPrank();
     }
 
-    // function redeemCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
-    //     ERC20Mock collateral = _getRandomCollateral(collateralSeed);
+    function redeemCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
+        ERC20Mock collateral = _getRandomCollateral(collateralSeed);
 
-    //     uint256 maxCollateral = dscEngine.getCollateralBalanceOfUser(msg.sender, address(collateral));
-    //     // since we are using stateful fuzz testing
-    //     // msg.sender has already deposited collateral in the above function
-    //     // we can redeem it
-    //     // to redeem it we need to get how much a user has deposited
-    //     // because we can't redeem more than deposited
+        uint256 maxCollateral = dscEngine.getCollateralBalanceOfUser(msg.sender, address(collateral));
+        // since we are using stateful fuzz testing
+        // msg.sender has already deposited collateral in the above function
+        // we can redeem it
+        // to redeem it we need to get how much a user has deposited
+        // because we can't redeem more than deposited
 
-    //     amountCollateral = bound(amountCollateral, 0, maxCollateral);
-    //     if (amountCollateral == 0) {
-    //         return;
-    //     }
+        amountCollateral = bound(amountCollateral, 0, maxCollateral);
+        if (amountCollateral == 0) {
+            return;
+        }
 
-    //     vm.startPrank(msg.sender);
-    //     dscEngine.redeemCollateral(address(collateral), amountCollateral);
-    //     vm.stopPrank();
-    // }
+        vm.startPrank(msg.sender);
+        dscEngine.redeemCollateral(address(collateral), amountCollateral);
+        vm.stopPrank();
+    }
 
     // function mint(uint256 randomDSCAmount) public {
     //     // dscAmount cannot exceed collateral balance in USD
