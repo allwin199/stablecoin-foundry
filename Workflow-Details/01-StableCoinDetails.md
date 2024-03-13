@@ -30,3 +30,4 @@
         - Your ETH is locked in the smart contract and can be exchanged back at any time for WETH.
         - When your ETH is returned, the contract burns the supplied WETH.
     - wBTC(wrapped BTC)
+      - same operation like wETH
