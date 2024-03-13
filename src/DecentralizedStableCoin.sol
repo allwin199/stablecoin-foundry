@@ -1,8 +1,8 @@
 // Layout of Contract:
 // version
 // imports
-// errors
 // interfaces, libraries, contracts
+// errors
 // Type declarations
 // State variables
 // Events
@@ -31,7 +31,7 @@ pragma solidity 0.8.20;
 import {ERC20Burnable, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @title Decentralized StableCoin
+/// @title DecentralizedStableCoin
 /// @author Prince Allwin
 /// @notice Collateral: Exogenous(wEth & wBTC)
 /// @notice Minting: Algorathmic
@@ -79,8 +79,9 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
         if (userBalance < amount) {
             revert DecentralizedStableCoin__BurnAmount_ExceedsBalance();
         }
+
+        /// @dev super() means use the burn() from the parent contract which is ERC20Burnable
         super.burn(amount);
-        // super() means use the burn() from the parent contract which is ERC20Burnable
     }
 
     //////////////////////////////////////////////////////////
@@ -94,7 +95,10 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
         if (to == address(0)) {
             revert DecentralizedStableCoin__ZeroAddress();
         }
+
+        /// @dev minting `msg.sender` with the `amount`
         _mint(to, amount);
+
         return true;
     }
 }
