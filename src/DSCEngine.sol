@@ -210,8 +210,10 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     // In order to redeem collateral:
-    // 1. health factor must be over 1 AFTER collateral pulled
+    // 1. Health factor must be more than or equal to `MIN_HEALTH_FACTOR` AFTER collateral pulled
     /// @notice CEI
+    /// @param tokenCollateralAddress The address of the token to redeem, token can be either wETH or wBTC
+    /// @param amountCollateral The amount of collateral to redeem
     function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral)
         public
         moreThanZero(amountCollateral)
@@ -221,11 +223,16 @@ contract DSCEngine is ReentrancyGuard {
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
+    /// @param amountDSCToBurn The amount of DSC to burn
     function burnDSC(uint256 amountDSCToBurn) public moreThanZero(amountDSCToBurn) nonReentrant {
         _burnDsc(amountDSCToBurn, msg.sender, msg.sender);
         _revertIfHealthFactorIsBroken(msg.sender); // I don't think this would ever hit...
     }
 
+    /// @param tokenCollateralAddress The address of the token to redeem, token can be either wETH or wBTC
+    /// @param amountCollateral The amount of collateral to redeem
+    /// @param amountDSCToBurn The amount of DSC to burn
+    /// @notice This function will burn your DSC and redeem your collateral in one transaction
     function redeemCollateralAndBurnDSC(
         address tokenCollateralAddress,
         uint256 amountCollateral,
@@ -236,12 +243,12 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     /// @param collateral The erc20 collateral address to liquidate from the user
-    /// @param user The user who has broken the healthFactor. Their healthfactor should be below MIN_HEALTH_FACTOR
+    /// @param user The user who has broken the healthFactor. Their healthfactor should be below `MIN_HEALTH_FACTOR`
     /// @param debtToCover The amount of DSC you want to burn to improve the users health factor
     /// @notice You can partially liquidate a user
     /// @notice You will get a 10% liquidation bonus for covering the users funds
     /// @notice This function working assumes the protocol will be roughly 200% overcollateralized in order for this to work
-    /// @notice The reason protocol should be overcollateralized is, we should incentivize the liquidator
+    /// @notice The reason protocol should be overcollateralized is, we should incentivize the liquidators
     /// @notice A known bug would be if the protocol was only 100% collateralized, we wouldn't be able to liquidate anyone
     /// For example, if the price of the collateral plummeted before anyone could be liquidated
     /// @notice follows CEI
@@ -256,8 +263,8 @@ contract DSCEngine is ReentrancyGuard {
             revert DSCEngine__HealthFactorOk();
         }
 
-        // DSC value we have in terms of USD
-        // but we need in terms of ETH because the liquidator will debt amount in ETH
+        // we have DSC value in terms of USD
+        // but we need in terms of ETH, because the liquidator will pay the debt amount in ETH
         uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
 
         // Bad User: $140 ETH is backing, $100 DSC
@@ -275,7 +282,14 @@ contract DSCEngine is ReentrancyGuard {
         uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
 
+        // the liquidator will get 10% bonus for covering $100 worth of DSC
+        // 10% of 100 = 10
+        // for covering $100 worth of DSC, let's add 10% bonus
+        // 100 + 10 = 110
+        // the liquidator will get back $110 worth of DSC
+        // let's calculate $110 worth of DSC in weth
         // 110e18/2000e18 = 0.055 ETH
+        // totally user will get 0.055 ETH in return for paying 0.05
         // user gets incentive of 10% of 0.05 which is 0.005 for liquidating
         // 0.05 + 0.005 = 0.055
         // by paying 0.05 ETH user gets back 0.055ETH
@@ -284,16 +298,17 @@ contract DSCEngine is ReentrancyGuard {
         // (0.05 ETH * 10)/100
         // 0.055e18
 
-        _redeemCollateral(collateral, totalCollateralToRedeem, user, msg.sender);
         _burnDsc(debtToCover, user, msg.sender);
+        _redeemCollateral(collateral, totalCollateralToRedeem, user, msg.sender);
 
         uint256 endingUserHealthFactor = _healthFactor(user);
 
+        /// @dev If the liquidating a bad user didn't improve the health factor then revert
         if (endingUserHealthFactor <= startingUserHealthFactor) {
             revert DSCEngine__HealthFactorNotImproved();
         }
 
-        // we also have to check whether msg.sender health factor is also not broken because of liquidating
+        // we also have to check whether `msg.sender` aka `liquidator` health factor is also not broken because of liquidating
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
@@ -301,15 +316,14 @@ contract DSCEngine is ReentrancyGuard {
     /////////////  Private & Internal Functions  /////////////
     //////////////////////////////////////////////////////////
 
+    /// @param tokenCollateralAddress The address of the token to redeem, token can be either wETH or wBTC
+    /// @param amountCollateral The amount of collateral to redeem
+    /// @param from will be `bad` user if called from `liquidate` else from will be `msg.sender`
+    /// @param to will be `liquidator` if called from `liquidate` else to will be `msg.sender`
     function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to)
         private
     {
-        // from will be the bad user, if called from liquidation
-        // to will be the liquidator
-
-        // If not called by liquidation both from & to will be msg.sender
-
-        // we have to reduce the collateral amount from bad user if called from liquidation
+        // we have to reduce the collateral amount from `bad user` if called from liquidation
         s_collateralDepositedByUser[from][tokenCollateralAddress] =
             s_collateralDepositedByUser[from][tokenCollateralAddress] - amountCollateral;
         emit CollateralRedeemed(from, to, tokenCollateralAddress, amountCollateral);
@@ -322,12 +336,10 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     /// @dev low-level internal function.
+    /// @param amountDscToBurn The amount of DSC to burn
+    /// @param onBehalfOf will be `bad` user if called from `liquidate` else onBehalfOf will be `msg.sender`
+    /// @param dscFrom will be `liquidator` if called from `liquidate` else dscFrom will be `msg.sender`
     function _burnDsc(uint256 amountDscToBurn, address onBehalfOf, address dscFrom) private {
-        // onBehalfOf will be the bad user, if called from liquidation
-        // dscFrom will be the liquidator
-
-        // If not called by liquidation both onBehalfOf & dscFrom will be msg.sender
-
         // deducting DSC balance from bad user
         s_DSCMinted[onBehalfOf] = s_DSCMinted[onBehalfOf] - amountDscToBurn;
 
