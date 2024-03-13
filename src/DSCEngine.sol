@@ -92,7 +92,7 @@ contract DSCEngine is ReentrancyGuard {
     uint256 private constant LIQUIDATION_PRECISION = 100;
     uint256 private constant MIN_HEALTH_FACTOR = 1e18;
 
-    /// @dev Immutable Variables
+    /// @dev Immutable
     DecentralizedStableCoin private immutable i_dsc;
 
     /// @dev Storage
@@ -112,7 +112,7 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     modifier isAllowedToken(address token) {
-        // If priceFeed is already set for the token then address will not be address(0)
+        /// @dev If `priceFeed` is already set for the `token` then address will not be address(0)
         if (s_priceFeeds[token] == address(0)) {
             revert DSCEngine__TokenNotAllowed();
         }
@@ -148,10 +148,10 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     //////////////////////////////////////////////////////////
-    ////////////////  External Functions  ////////////////////
+    /////////////  External & Public Functions  //////////////
     //////////////////////////////////////////////////////////
     /// @notice follows CEI
-    /// @dev users are allowed to deposit with either wETH or wBTC
+    /// @dev users are allowed to deposit with either `wETH or wBTC`
     /// @dev whenever user want to deposit collateral tokenAddress should be either wETH or wBTC
     /// @dev since we are working with external contracts let's add nonreentrant
     /// @param tokenCollateralAddress  tokenAddress should be either wETH or wBTC, handled by isAllowedToken modifier
@@ -164,12 +164,12 @@ contract DSCEngine is ReentrancyGuard {
     {
         /// @dev since we have more than one token for collateral
         /// @dev we have to track the user and the token and then the amount.
-        s_collateralDepositedByUser[msg.sender][tokenCollateralAddress] +=
+        s_collateralDepositedByUser[msg.sender][tokenCollateralAddress] =
             s_collateralDepositedByUser[msg.sender][tokenCollateralAddress] + amountCollateral;
 
         emit CollateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
 
-        // To get the tokens
+        /// @dev To get the tokens
         /// @dev msg.sender should approve DSCEngine contract to transfer tokens on behalf of the sender
         /// @dev DSCEngine will transfer tokens and place it in this contract
         /// @dev user balance will be updated accordingly
@@ -442,7 +442,8 @@ contract DSCEngine is ReentrancyGuard {
         // price will be 8 decimals
         // but ether is 18 decimals
         // so we have to do uint256(price) * 1e10
-        // this will give price of 1ETH in terms of USD
+        // which will give price in 18 decimals
+        // which is price of 1ETH in terms of USD
         // If we multiple with the amount
         // we will get actual value of collateral in USD
         uint256 valueOfEthInUsd = uint256(price) * ADDITIONAL_FEED_PRECISION;
