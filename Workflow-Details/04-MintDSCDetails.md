@@ -46,8 +46,11 @@ mintDSC Explanation
 2. User should have deposited collateral
 3. User should be 200% overcollateralized
 
--   calculateHealthFactor will be return the healthFactor of the user.
+-   calculateHealthFactor will return the healthFactor of the user.
 -   calculateHealthFactor will say if the user is 200% overcollateralized or not.
 -   If the healthFactor is > 1.
 -   Healthfactor is OK.
+-   which means user is 200% collateralized
 -   If not user cannot mint DSC
+-   The user has to add more collateral
+-   To mint more DSC

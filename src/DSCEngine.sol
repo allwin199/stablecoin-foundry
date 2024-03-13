@@ -1,8 +1,8 @@
 // Layout of Contract:
 // version
 // imports
-// errors
 // interfaces, libraries, contracts
+// errors
 // Type declarations
 // State variables
 // Events
@@ -36,15 +36,15 @@ import {OracleLib} from "./libraries/OracleLib.sol";
 
 /// @title DSCEngine
 /// @author Prince Allwin
-/// The system is designed to be as minimal as possible, and have the tokens maintain a 1 DSC token == $1 pegged.
+/// @notice The system is designed to be as minimal as possible, and have the tokens maintain a `1 DSC token == $1 pegged`.
 
-/// This stablecoin has the properties
+/// @notice This stablecoin has the properties
 /// - Exogenous Collateral
 /// - Dollar Pegged
 /// - Algorathmically Stable
-/// It is similar to DAI if DAI had no governance, no fees, and was only backed by wETH & wBTC.
+/// @notice It is similar to `DAI` if DAI had `no governance`, `no fees`, and was only backed by `wETH & wBTC`.
 
-/// @notice Our DSC system should be "overcollateralized". At no point, should the value of all collateral <= the dollar backed value of all the DSC.
+/// @notice Our DSC system should always be "overcollateralized". At no point, should the value of all collateral should be less than the dollar backed value of all the DSC.
 
 /// @notice This contract is the core of the DSC System.
 /// It handles all the logic for minting, Burning and redeeming DSC
@@ -84,7 +84,7 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////////////////////////////
     /////////////////  State Variables  //////////////////////
     //////////////////////////////////////////////////////////
-    // constant
+    /// @dev constant
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant PRECISION = 1e18;
     uint256 private constant LIQUIDATION_THRESHOLD = 50; // This means you need to be 200% over-collateralized
@@ -92,10 +92,10 @@ contract DSCEngine is ReentrancyGuard {
     uint256 private constant LIQUIDATION_PRECISION = 100;
     uint256 private constant MIN_HEALTH_FACTOR = 1e18;
 
-    // Immutable Variables
+    /// @dev Immutable Variables
     DecentralizedStableCoin private immutable i_dsc;
 
-    // Storage
+    /// @dev Storage
     mapping(address token => address priceFeed) private s_priceFeeds;
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDepositedByUser;
     mapping(address user => uint256 amountDSCMinted) private s_DSCMinted;

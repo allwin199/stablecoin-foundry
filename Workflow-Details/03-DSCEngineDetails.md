@@ -1,14 +1,14 @@
 # DSCEngine
 
--   DSCEngine is reponsible to make sure that 1 DSC token is always equal to $1
--   DSCEngine will be responsible for Depositing and redeeming collateral
--   DSCEngine will be responsible for Minting and Burning DSC
+-   DSCEngine is reponsible to make sure that `1 DSC` token is always equal to `$1`
+-   DSCEngine will be responsible for `Depositing` and `redeeming` collateral
+-   DSCEngine will be responsible for `Minting` and `Burning` `DSC`
 
 ## Constructor
 
 -   Before deploying this contract
--   wETH & wBTC should be deployed and that addresses will be passed to the DSCEngine
--   Also DecentralizedStableCoin should be deployed and passed in the constructor
+-   `wETH & wBTC` should be deployed and that addresses will be passed to the DSCEngine
+-   Also `DecentralizedStableCoin` should be deployed and passed in the constructor
 
 ## Deposit Collateral
 
@@ -21,7 +21,7 @@
 
 -   Before minting DSC, user should have more collateral value than minimum threshold
 
-```solidity
+```js
     uint256 private constant LIQUIDATION_THRESHOLD = 50; //user should be 200% overcollateralized
     uint256 private constant LIQUIDATION_PRECISION = 100;
 
@@ -69,7 +69,7 @@
 
 ## Liquidation
 
-```sol
+```js
     let' say $100 worth of ETH is backing $50 worth of DSC
     It's not 100ETH it is 100$ worth of ETH
     which means usdValue for this ETH is $100
