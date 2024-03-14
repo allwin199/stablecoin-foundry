@@ -5,3 +5,8 @@
    Then a person can mint a max of 2000 DSC coins, because price of 1DSC coin is $1
 
 2. Can I deploy my own wETH contract?
+   wEth contract can be deployed to sepolia, but unsure how to deploy on mainnet 
+
+
+
+
