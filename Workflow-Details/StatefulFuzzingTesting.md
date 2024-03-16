@@ -1,4 +1,5 @@
 Invariant Testing (Stateful Fuzz)
 
--   Call the function in order to test using Handler
--   Then test it
+-   Set the target contract to `Handler`
+-   Inside the Handler contract setup all the functions which fuzzer needs to call
+
