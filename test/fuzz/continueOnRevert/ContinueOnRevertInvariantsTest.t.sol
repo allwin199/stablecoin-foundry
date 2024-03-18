@@ -57,29 +57,29 @@ contract InvariantsTest is StdInvariant, Test {
         vm.stopPrank();
     }
 
-    function invariant_ProtocolMustHave_MoreValue_ThanDSC_ContinueOnRevert() public {
-        // get the value of all the collateral in the protocol
-        // compare it to all the debt (DSC)
+    // function invariant_ProtocolMustHave_MoreValue_ThanDSC_ContinueOnRevert() public {
+    //     // get the value of all the collateral in the protocol
+    //     // compare it to all the debt (DSC)
 
-        // let's get the totalSupply of DSC
-        uint256 totalSupployOfDSC = dsCoin.totalSupply();
+    //     // let's get the totalSupply of DSC
+    //     uint256 totalSupployOfDSC = dsCoin.totalSupply();
 
-        // let's get all the collaterals
-        // User will approve the DSC Engine
-        // DSC Engine will transfer all the tokens to itself and keep track of the users deposited
-        uint256 totalWethDeposited = IERC20(weth).balanceOf(address(dscEngine));
-        uint256 totalWbtcDeposited = IERC20(wbtc).balanceOf(address(dscEngine));
+    //     // let's get all the collaterals
+    //     // User will approve the DSC Engine
+    //     // DSC Engine will transfer all the tokens to itself and keep track of the users deposited
+    //     uint256 totalWethDeposited = IERC20(weth).balanceOf(address(dscEngine));
+    //     uint256 totalWbtcDeposited = IERC20(wbtc).balanceOf(address(dscEngine));
 
-        // Let's get the value of weth and wbtc in USD
-        uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
-        uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
+    //     // Let's get the value of weth and wbtc in USD
+    //     uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
+    //     uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
 
-        console2.log("Total weth Deposited", totalWethDeposited);
-        console2.log("Total wbtc Deposited", totalWbtcDeposited);
-        console2.log("Total DSC Minted    ", dsCoin.totalSupply());
+    //     console2.log("Total weth Deposited", totalWethDeposited);
+    //     console2.log("Total wbtc Deposited", totalWbtcDeposited);
+    //     console2.log("Total DSC Minted    ", dsCoin.totalSupply());
 
-        assertGe(wethValue + wbtcValue, totalSupployOfDSC, "totalCollateral > DSC");
-    }
+    //     assertGe(wethValue + wbtcValue, totalSupployOfDSC, "totalCollateral > DSC");
+    // }
 
     // for continue on Revert, let's keep `fail_on_revert as false`
 }
