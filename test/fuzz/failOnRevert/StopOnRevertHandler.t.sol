@@ -41,8 +41,8 @@ contract Handler is Test {
         // using _getRandomCollateral etither weth or wbtc will be selected based on modulo
         ERC20Mock collateral = _getRandomCollateral(collateralSeed);
 
-        uint256 collateralAmount = bound(randomCollateralAmount, 1, MAX_DEPOSIT_SIZE);
         // we don't want to deposit with 0
+        uint256 collateralAmount = bound(randomCollateralAmount, 1, MAX_DEPOSIT_SIZE);
 
         vm.startPrank(msg.sender);
         collateral.mint(msg.sender, collateralAmount);
@@ -78,7 +78,7 @@ contract Handler is Test {
         vm.stopPrank();
     }
 
-    function mint(uint256 randomDSCAmount, uint256 addressSeed) public {
+    function mint(uint256 amount, uint256 addressSeed) public {
         if (usersWithCollateralDeposited.length == 0) {
             return;
         }
@@ -86,11 +86,25 @@ contract Handler is Test {
         address sender = usersWithCollateralDeposited[addressSeed % usersWithCollateralDeposited.length];
 
         // dscAmount cannot exceed collateral balance in USD
-        uint256 dscAmount = bound(randomDSCAmount, 1, MAX_DEPOSIT_SIZE);
+        // uint256 dscAmount = bound(randomDSCAmount, 1, MAX_DEPOSIT_SIZE);
+
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(sender);
+
+        int256 maxDscToMint = (int256(collateralValueInUsd) / 2) - int256(totalDscMinted);
+
+        if (maxDscToMint < 0) {
+            return;
+        }
+
+        amount = bound(amount, 0, uint256(maxDscToMint));
+
+        if (amount == 0) {
+            return;
+        }
 
         vm.startPrank(sender);
         // minting DSC
-        dscEngine.mintDSC(dscAmount);
+        dscEngine.mintDSC(amount);
         vm.stopPrank();
     }
 
@@ -105,6 +119,13 @@ contract Handler is Test {
         dscEngine.liquidate(address(collateral), userToBeLiquidated, debtToCover);
     }
 
+    // This breaks our invariant test suite
+    // initially ethUsd priceFeed = $2000e8
+    // let's say new price = $10
+    // since eth price tanked
+    // collateral value will not be the same
+    // every user will be undercollateralized
+    // our system becomes insolvent
     // function updateCollateralPrice(uint96 newPrice, uint256 collateralSeed) public {
     //     int256 intNewPrice = int256(uint256(newPrice));
     //     ERC20Mock collateral = _getRandomCollateral(collateralSeed);

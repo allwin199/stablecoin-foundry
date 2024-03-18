@@ -12,7 +12,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
 library OracleLib {
     error OraclLib__StalePrice();
 
-    uint256 private constant TIMEOUT = 3 hours; // 3 * 60 * 60 = 10800 seconds
+    uint256 private constant TIMEOUT = 3 hours; // 3 * 60 * 60 = 10800 seconds // 3 * 60 minutes * 60 seconds
     // for ETH/USD and BTC/USD Heartbeat is 3600s
     // we are giving more time
 
